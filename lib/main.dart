@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:book_journey/Login/login.dart';
 import 'package:book_journey/HomePage/HomePage.dart';
-void main() {
-  runApp(const MyApp());
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+
+Future<void> main() async {
+  await dotenv.load(fileName: ".env");
+
+  print("Loaded .env variables: ${dotenv.env}");  // Aggiungi questa linea per il debug
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
