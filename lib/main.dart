@@ -3,9 +3,13 @@ import 'package:book_journey/Login/login.dart';
 import 'package:book_journey/HomePage/HomePage.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+
 
 Future<void> main() async {
-  await dotenv.load(fileName: ".env");
+  await dotenv.load();
 
   print("Loaded .env variables: ${dotenv.env}");  // Aggiungi questa linea per il debug
   runApp(MyApp());
