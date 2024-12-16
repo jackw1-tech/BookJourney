@@ -32,7 +32,6 @@ class _LoginPageState extends State<LoginPage> {
         final data = jsonDecode(response.body);
         widget.onLoginSuccess(data['auth_token']);
       } else {
-        // Gestione degli errori
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Login failed: ${response.body}')),
         );
@@ -65,169 +64,178 @@ class _LoginPageState extends State<LoginPage> {
       ),
       body: Stack(
         children: [
-
           Positioned(
-            child: Column(
-          children: [
-            Container(
-              decoration: const BoxDecoration(
-                color: Color(0xFF06402B),
-              ),
-              height: 400,
-              width: double.infinity,
-            ),
-            Expanded(child:
-            Container(
-              decoration: const BoxDecoration(
-                color: Color(0xFFEBEBEB),
-              ),
-              height: 400,
-              width: double.infinity,
-            ),
-            ),
-
-        ],
-      )
+              child:
+              Column(
+                  children: [
+                    Container(
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF06402B),
+                      ),
+                      height: 390,
+                    ),
+                    Expanded(child:
+                    Container(
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFEBEBEB),
+                      ),
+                    ),
+                    ),
+                  ]
+              )
           ),
           Positioned(
-            top: 180,
-            left: 25,
-            right: 25,
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.all(
-                  Radius.circular(30.0),
-                ),
+            top: 328,
+            child: ClipOval(
+              child: Container(
+                width: MediaQuery.of(context).size.width,
+                height: 120,
+                color: const Color(0xFFEBEBEB),
               ),
-              height: 550,
-              width: double.infinity,
             ),
           ),
 
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 50.0),
-            child: Column(
-              children: [
-                const SizedBox(height: 60.0),
-                Image.asset(
-                  'assets/images/book.png',
-                  width: 70.0,
-                  height: 70.0,
-                  fit: BoxFit.cover,
-                ),
-
-    const SizedBox(height: 70.0),
-    Expanded(child:
-    SingleChildScrollView(
-    padding: const EdgeInsets.only(top: 60.0),
-    child: Column(
-    children: [
-    const Text("Welcome back",  style: TextStyle(
-      fontSize: 24,
-      fontWeight: FontWeight.bold,
-      color: Color(0xFF06402B),
-      fontFamily: 'Roboto', // Specifica il font
-    ),
-    ),
-    const SizedBox(height: 80.0),
-                TextField(
-                  controller: _usernameController,
-                  decoration: InputDecoration(
-                    hintText: 'Username',
-                    contentPadding: const EdgeInsets.only(left: 20.0),
-                    prefixIcon: Padding(
-                      padding: const EdgeInsets.all(10.0),
-                      child: Image.asset(
-                        'assets/images/user.ico',
-                        width: 24,
-                        height: 24,
-                      ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                      borderSide: const BorderSide(color: Color(0xFF06402B), width: 3.0),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                      borderSide: const BorderSide(
-                        color: Color(0xFF06402B),
-                        width: 5.0,
-                      ),
-                    ),
+          SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40.0),
+              child: Column(
+                children: [
+                  const SizedBox(height: 60.0),
+                  Image.asset(
+                    'assets/images/book.png',
+                    width: 70.0,
+                    height: 70.0,
+                    fit: BoxFit.cover,
                   ),
-                ),
-                const SizedBox(height: 20.0),
-                TextField(
-                  controller: _passwordController,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    hintText: 'Password',
-                    contentPadding: const EdgeInsets.only(left: 20.0),
-                    prefixIcon: Padding(
-                      padding: const EdgeInsets.all(10.0),
-                      child: Image.asset(
-                        'assets/images/key.png',
-                        width: 24,
-                        height: 24,
-                      ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                      borderSide: const BorderSide(color: Color(0xFF06402B), width: 3.0),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                      borderSide: const BorderSide(
-                        color: Color(0xFF06402B),
-                        width: 5.0,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 35),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF06402B),
+                  const SizedBox(height: 70.0),
+                  Card(
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
+                      borderRadius: BorderRadius.circular(50),
                     ),
-                    padding: const EdgeInsets.symmetric(vertical: 15.0, horizontal: 30.0),
+                    color: Colors.white,
+                    elevation: 20,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 70.0, left: 40, right: 40, bottom: 70),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            "Welcome back",
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF06402B),
+                              fontFamily: 'Roboto',
+                            ),
+                          ),
+                          const SizedBox(height: 30.0),
+                          TextField(
+                            controller: _usernameController,
+                            decoration: InputDecoration(
+                              hintText: 'Username',
+                              contentPadding: const EdgeInsets.only(left: 10.0),
+                              prefixIcon: Padding(
+                                padding: const EdgeInsets.symmetric(vertical:15, horizontal: 15),
+                                child: Image.asset(
+                                  'assets/images/user.ico',
+                                  width: 20,
+                                  height: 20,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(30),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFF06402B),
+                                  width: 3.0,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(30),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFF06402B),
+                                  width: 5.0,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20.0),
+                          TextField(
+                            controller: _passwordController,
+                            obscureText: true,
+                            decoration: InputDecoration(
+                              hintText: 'Password',
+                              contentPadding: const EdgeInsets.only(left: 10.0),
+                              prefixIcon: Padding(
+                                padding: const EdgeInsets.symmetric(vertical:15, horizontal: 15),
+                                child: Image.asset(
+                                  'assets/images/key.png',
+                                  width: 20,
+                                  height: 20,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(30),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFF06402B),
+                                  width: 3.0,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(30),
+                                borderSide: const BorderSide(
+                                  color: Color(0xFF06402B),
+                                  width: 5.0,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 50),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF06402B),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 15.0,
+                                horizontal: 30.0,
+                              ),
+                            ),
+                            onPressed: () {
+                              authenticate(
+                                _usernameController.text,
+                                _passwordController.text,
+                              );
+                            },
+                            child: isLoading
+                                ? const SizedBox(
+                              width: 20.0,
+                              height: 20.0,
+                              child: CircularProgressIndicator(
+                                valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                                strokeWidth: 2.0,
+                              ),
+                            )
+                                : const Text(
+                              'Login',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 17,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  onPressed: () {
-                    authenticate(
-                      _usernameController.text,
-                      _passwordController.text,
-                    );
-                  },
-                  child: isLoading
-                      ? const SizedBox(
-                    width: 20.0,
-                    height: 20.0,
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      strokeWidth: 2.0,
-                    ),
-                  )
-                      : const Text(
-                    'Login',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 17,
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-    )
-        ],
 
+        ],
       ),
-    )
-    ]
-    )
-    )
-    ;
+    );
   }
 }
