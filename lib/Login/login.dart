@@ -1,17 +1,19 @@
+import 'package:book_journey/HomePage/HomePage.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:book_journey/api.dart';
+import 'caricamento_pre_home_page.dart';
 
 class LoginPage extends StatefulWidget {
-  final Function(String) onLoginSuccess;
-  const LoginPage({super.key, required this.onLoginSuccess});
+  const LoginPage({super.key});
 
   @override
   _LoginPageState createState() => _LoginPageState();
 }
 
 class _LoginPageState extends State<LoginPage> {
+  String _authToken = "";
   bool isLoading = false;
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
@@ -30,7 +32,9 @@ class _LoginPageState extends State<LoginPage> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        widget.onLoginSuccess(data['auth_token']);
+        setState(() {
+          _authToken = data['auth_token'];
+        });
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Login failed: ${response.body}')),
@@ -46,6 +50,8 @@ class _LoginPageState extends State<LoginPage> {
       });
     }
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -201,11 +207,12 @@ class _LoginPageState extends State<LoginPage> {
                                 horizontal: 30.0,
                               ),
                             ),
-                            onPressed: () {
-                              authenticate(
+                            onPressed: () async {
+                              await authenticate(
                                 _usernameController.text,
                                 _passwordController.text,
                               );
+                              _authToken.isNotEmpty? Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Caricamentoprehomepage(authToken: _authToken))) : null;
                             },
                             child: isLoading
                                 ? const SizedBox(

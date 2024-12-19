@@ -4,8 +4,8 @@ import 'package:book_journey/Profilo/Profilo.dart';
 
 class HomePage extends StatefulWidget {
   final String authToken;
-
-  const HomePage({super.key, required this.authToken});
+  List<String> likedBooks = [];
+  HomePage({super.key, required this.authToken,required this.likedBooks});
 
   @override
   _HomePageState createState() => _HomePageState();
@@ -20,7 +20,7 @@ class _HomePageState extends State<HomePage> {
         body: TabBarView(
                 children: [
                   const Tab(text: "Letture in corso"),
-                  Cerca_Libri(authToken: widget.authToken),
+                  Cerca_Libri(authToken: widget.authToken,likedBooks: widget.likedBooks),
                   Profilo(authToken: widget.authToken)
                 ],
               ),

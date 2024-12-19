@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:book_journey/Login/login.dart';
-import 'package:book_journey/HomePage/HomePage.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 
@@ -32,21 +31,11 @@ class AuthWrapper extends StatefulWidget {
 }
 
 class _AuthWrapperState extends State<AuthWrapper> {
-  String _authToken = "";
+
 
   @override
   Widget build(BuildContext context) {
-
-    if (_authToken.isEmpty) {
-      return LoginPage(onLoginSuccess: (String token) {
-        setState(() {
-          _authToken = token;
-        });
-      });
-    } else {
-      return HomePage(authToken: _authToken);
-    }
+    return const LoginPage();
   }
+
 }
-
-

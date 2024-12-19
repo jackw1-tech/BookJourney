@@ -19,6 +19,7 @@ class _ProfiloState extends State<Profilo> {
   List<dynamic> _genres = []; // Memorizza la lista dei generi
   List<dynamic> _books = [];
 
+
   Future<void> sendText(String text) async {
     final url = Uri.parse(Config.libroUrl);
     try {
@@ -248,6 +249,7 @@ class _ProfiloState extends State<Profilo> {
           centerTitle: true,
           floating: true,
         ),
+
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.all(16.0),
