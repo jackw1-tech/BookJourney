@@ -6,8 +6,9 @@ import 'package:book_journey/api.dart';
 
 class Profilo extends StatefulWidget {
   final String authToken;
+  ValueNotifier<List<List<dynamic>>> dati = ValueNotifier<List<List<dynamic>>>([]);
 
-  Profilo({required this.authToken});
+  Profilo({required this.authToken, required this.dati });
 
   @override
   _ProfiloState createState() => _ProfiloState();
@@ -16,9 +17,92 @@ class Profilo extends StatefulWidget {
 class _ProfiloState extends State<Profilo> {
   final TextEditingController _controller = TextEditingController();
   String _response = "";
-  List<dynamic> _genres = []; // Memorizza la lista dei generi
+  List<dynamic> _genres = [];
   List<dynamic> _books = [];
 
+  Future<void> elimina_preferito(String bookISBN, Map bookData) async {
+    try {
+      final response = await http.get(
+        Uri.parse(Config.libroUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Token ${widget.authToken}',
+        },);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final lista_libri = json.decode(response.body) as List<dynamic>;
+        for (var libro in lista_libri) {
+          if (libro['isbn'] == bookISBN) {
+            String id_libro = libro['id'];
+            String fullUrlDettagliLibro = '${Config.libroUrl}$id_libro';
+            final response2 = await http.get(
+              Uri.parse(fullUrlDettagliLibro),
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Token ${widget.authToken}',
+              },);
+            if (response2.statusCode == 200 || response2.statusCode == 201) {
+
+              final libro_singolo = json.decode(response2.body);
+              final response3 = await http.get(Uri.parse(Config.preferitiUrl),
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': 'Token ${widget.authToken}',
+                },);
+              if (response3.statusCode == 200 || response3.statusCode == 201) {
+                final lista_preferiti = json.decode(response3.body);
+
+                for (var pref in lista_preferiti) {
+                  if (pref['libro'] == libro_singolo['id']) {
+
+                    String id_pref = pref['id'];
+                    String fullUrlEliminaPref = '${Config
+                        .preferitiUrl}$id_pref/';
+
+                    final response4 = await http.delete(
+                      Uri.parse(fullUrlEliminaPref),
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Token ${widget.authToken}',
+                      },
+                    );
+
+                    if (response4.statusCode == 200 || response4.statusCode == 204) {
+
+                      setState(() {
+
+                        widget.dati.value[1].removeWhere((book) {
+                          bool shouldRemove = book['isbn'] == bookData['isbn'];
+                          if (shouldRemove) {
+                            print("Rimuovendo libro con id: ${book['isbn']}");
+                          }
+                          return shouldRemove;
+                        });
+                        widget.dati.value[0].removeWhere((preferito) {
+                          bool shouldRemove = preferito['id'] == id_pref;
+                          if (shouldRemove) {
+                            print("Rimuovendo preferito con id: ${preferito['id']}");
+                          }
+                          return shouldRemove;
+                        });
+                      });
+                      return;
+                    } else {
+                      print('Errore nella richiesta DELETE: ${response4.statusCode}');
+                    }
+                  }
+                }
+
+              }
+            }
+          }
+        }
+      }
+    }
+
+    catch (e) {
+      return;
+    }
+  }
 
   Future<void> sendText(String text) async {
     final url = Uri.parse(Config.libroUrl);
@@ -49,7 +133,6 @@ class _ProfiloState extends State<Profilo> {
     }
   }
 
-
   Future<void> fetchBooks(String query) async {
     final String apiKey = dotenv.env['API_KEY'] ?? '';
     const String endpoint = 'https://www.googleapis.com/books/v1/volumes';
@@ -72,195 +155,233 @@ class _ProfiloState extends State<Profilo> {
     }
   }
 
-  Future<void> metti_like(String id, Map libro) async {
-    String libro_url = dotenv.env['LIBRO'] ?? '';
-    try {
-      final body = jsonEncode(libro);
 
-      final response = await http.post(
-        Uri.parse(libro_url),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Token ${widget.authToken}',
-        },
-        body: body,
-      );
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        try {
-          final response = await http.get(
-            Uri.parse(libro_url),
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Token ${widget.authToken}',
+  Future<void> mark_as_done_book(Map libro) async{
+
+    List<dynamic> dati_attuali = widget.dati.value[2];
+    for (var app in dati_attuali) {
+      if (app is Map<String, dynamic>) { // Verifica che l'elemento sia una mappa
+        app.forEach((key, value) {
+          print('Chiave: $key, Valore: $value, Tipo del valore: ${value.runtimeType}'); // Stampa chiave e valore
+        });
+      } else {
+        print('L\'elemento non è una mappa');
+      }
+    }
+    print(libro['numero_pagine']);
+    print(libro['numero_pagine'].runtimeType);
+    dati_attuali[0]['numero_libri_letti'] += 1;
+    dati_attuali[0]['numero_pagine_lette'] += (libro['numero_pagine']);
+    dati_attuali[0]['numero_ore_lettura'] = (dati_attuali[0]['numero_pagine_lette'] / dati_attuali[0]['pagine_al_minuto_lette'])/60;
+    dati_attuali[0]['numero_giorni_lettura'] = dati_attuali[0]['numero_ore_lettura'] / 24;
+    dati_attuali[0]['numero_mesi_lettura'] = dati_attuali[0]['numero_giorni_lettura'] / 30;
+
+
+
+    setState(() {
+      widget.dati.value[2][0] = dati_attuali[0];
+    });
+
+
+    String url_base_profilo = Config.profilo_lettoreURL;
+    String profilo_lettore_url = url_base_profilo + "2" + '/';
+
+    final response = await http.put(Uri.parse(
+        profilo_lettore_url),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Token ${widget.authToken}',
+      },
+      body: jsonEncode(widget.dati.value[2][0]),
+
+    );
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      print("ciao");
+      print(json.decode(response.body));
+    }
+
+  }
+
+  void show_preferiti_dialog(Map libro){
+    print({widget.dati.value[2][0]['numero_ore_lettura']}.runtimeType);
+    showDialog(context: context,   builder: (BuildContext context) {
+      return SimpleDialog(
+        children: [
+          SimpleDialogOption(
+            onPressed: () async {
+              await elimina_preferito(libro['isbn'], libro);
+              Navigator.pop(context);
             },
-          );
-
-          if (response.statusCode == 200 || response.statusCode == 200) {
-            for (libro in jsonDecode(response.body)) {
-              if (libro['google_books_id'] == id) {
-                String api = dotenv.env['UTENTE'] ?? '';
-                int id_utente = 2;
-                String preferiti = '$api$id_utente/preferiti/';
-                print(preferiti);
-                String id_libro = libro['id'];
-                try {
-                  final body = jsonEncode({'libro': id_libro});
-
-                  final response = await http.post(
-                    Uri.parse(preferiti),
-                    headers: {
-                      'Content-Type': 'application/json',
-                      'Authorization': 'Token ${widget.authToken}',
-                    },
-                    body: body,
-                  );
-
-                  if (response.statusCode == 200 ||
-                      response.statusCode == 201) {
-                    print('Successo: ${response.body}');
-                  } else {
-                    print('Errore: ${response.statusCode}, ${response.body}');
-                  }
-                } catch (e) {
-                  print('Errore durante la richiesta: $e');
-                }
-              }
-            }
-          } else {
-            print('Errore: ${response.statusCode}, ${response.body}');
-          }
-        } catch (e) {
-          print('Errore durante la richiesta: $e');
-        }
-      } else {
-        print('Errore: ${response.statusCode}, ${response.body}');
-      }
-    } catch (e) {
-      print('Errore durante la richiesta: $e');
-    }
-  }
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+              Text('Unfavorite', textAlign: TextAlign.center),
+              SizedBox(width: 5),
+              Icon(Icons.heart_broken_outlined, color: Color(0xFF06402B),)
+            ]
+            ),
+          ),
+          const Divider(),
+          SimpleDialogOption(
+            onPressed: () {
+              Navigator.pop(context, 'Option 1');
+            },
+            child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('Start reading', textAlign: TextAlign.center,),
+                  SizedBox(width: 5),
+                  Icon(Icons.menu_book, color: Color(0xFF06402B),)
+                ]
+            ),
+          ),
+          const Divider(),
+          SimpleDialogOption(
+            onPressed: () async  {
+              await mark_as_done_book(libro);
+              Navigator.pop(context);
+            },
+            child:const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('Mark as done', textAlign: TextAlign.center,),
+                  SizedBox(width: 5),
+                  Icon(Icons.done, color: Color(0xFF06402B),)
+                ]
+            ),
+          ),
 
 
-  Future<void> fetchGenres() async {
-    final url = Uri.parse(Config.libroUrl);
-    try {
-      final response = await http.get(
-        url,
-        headers: {'Authorization': 'Token ${widget.authToken}'},
+        ],
+
       );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        setState(() {
-          _genres = data;
-          _books = [];
-        });
-      } else {
-        setState(() {
-          _response = 'Errore: ${response.statusCode}';
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _response = 'Errore: $e';
-      });
     }
+    );
+
+
   }
 
-  void _showTextEditor(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Inserisci una stringa'),
-          content: TextField(
-            controller: _controller,
-            decoration: InputDecoration(hintText: 'Scrivi qui...'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                sendText(_controller.text);
-              },
-              child: Text('Invia'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('Annulla'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showBookSearch(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Inserisci il nome'),
-          content: TextField(
-            controller: _controller,
-            decoration: InputDecoration(hintText: 'Scrivi qui...'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                fetchBooks(_controller.text);
-              },
-              child: Text('Invia'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('Annulla'),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
 
   @override
   Widget build(BuildContext context) {
-    // Lista di 50 libri
-    final List<String> libri = List.generate(50, (index) => 'Libro ${index + 1}');
-
-    return CustomScrollView(
-      slivers: [
-        const SliverAppBar(
-          title: Text(
-            'BookJourney',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+    return NestedScrollView(
+      headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+        return <Widget>[
+          const SliverAppBar(
+            title: Text(
+              'BookJourney',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
+            backgroundColor: Color(0xFF06402B),
+            centerTitle: true,
+            floating: true,
           ),
-          backgroundColor: Color(0xFF06402B),
-          centerTitle: true,
-          floating: true,
-        ),
+        ];
+      },
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                children: [
+                  Card(
+                    child: Container(
+                      width: 500,
+                      height: 200,
+                      child: Column(
+                          children: [
+                            Text('Ore di lettura: ${widget.dati.value[2][0]['numero_ore_lettura'].toStringAsFixed(0)}', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                            Text('Giorni di lettura: ${widget.dati.value[2][0]['numero_giorni_lettura'].toStringAsFixed(1)}', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                            Text('Libri letti: ${widget.dati.value[2][0]['numero_libri_letti'].toStringAsFixed(0)}', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                          ]
+                      )
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Libri preferiti:',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  // Aggiungi qui il contenuto della lista orizzontale
+                  Container(
+                    height: 380, // Altezza della lista orizzontale
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: widget.dati.value[1].length,
+                      itemBuilder: (context, index) {
+                        var book = widget.dati.value[1][index] ?? '';
+                        var imageUrl = book['copertina_url'];
+                        var titolo = book['titolo'];
 
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Text(
-              'Libri disponibili:',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        return GestureDetector(
+                          child: Card(
+                            elevation: 5,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10), // Imposta il raggio degli angoli
+                            ),
+                            child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Container(
+                                  child: Column(
+                                    children: [
+                                      imageUrl.isNotEmpty
+                                          ? Image.network(imageUrl) // Carica l'immagine dalla rete
+                                          : const Center(child: Icon(Icons.image, size: 30)),
+                                      const SizedBox(height: 10),
+                                      Text('$titolo'),
+
+                                    ],
+
+                                  ),
+                                  width: 150,
+                                )
+                            ),
+                          ),
+                          onTap: (){show_preferiti_dialog(book);},
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Libreria:',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  // Aggiungi qui il contenuto della lista orizzontale
+                  Container(
+                    height: 200, // Altezza della lista orizzontale
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: 10,
+                      itemBuilder: (context, index) {
+                        return Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Text('Libro ${index + 1}', style: const TextStyle(fontSize: 16)),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
+          ],
         ),
-
-      ],
+      ),
     );
   }
 }

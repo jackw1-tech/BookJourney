@@ -6,8 +6,8 @@ import 'package:book_journey/api.dart';
 
 class Cerca_Libri extends StatefulWidget {
   final String authToken;
-  List<String> likedBooks = [];
-  Cerca_Libri({required this.authToken, required this.likedBooks});
+  ValueNotifier<List<List<dynamic>>> dati = ValueNotifier<List<List<dynamic>>>([]);
+  Cerca_Libri({required this.authToken, required this.dati});
 
   @override
   _CercaLibriState createState() => _CercaLibriState();
@@ -15,16 +15,14 @@ class Cerca_Libri extends StatefulWidget {
 
 class _CercaLibriState extends State<Cerca_Libri> {
   final TextEditingController _controller = TextEditingController();
-  String _response = "";
-  List<dynamic> _genres = []; // Memorizza la lista dei generi
   List<dynamic> _books = [];
   bool isSearch = false;
   bool isLoadingLike = false;
-  List<String> likedBooks = [];
+  List<String> isbn_preferiti = [];
 
 
 
-  Future<void> elimina_preferito(String bookISBN) async {
+  Future<void> elimina_preferito(String bookISBN, Map bookData) async {
     try {
       final response = await http.get(
         Uri.parse(Config.libroUrl),
@@ -34,7 +32,6 @@ class _CercaLibriState extends State<Cerca_Libri> {
         },);
       if (response.statusCode == 200 || response.statusCode == 201) {
         final lista_libri = json.decode(response.body) as List<dynamic>;
-        print(lista_libri);
         for (var libro in lista_libri) {
           if (libro['isbn'] == bookISBN) {
             String id_libro = libro['id'];
@@ -48,7 +45,6 @@ class _CercaLibriState extends State<Cerca_Libri> {
             if (response2.statusCode == 200 || response2.statusCode == 201) {
 
               final libro_singolo = json.decode(response2.body);
-              print(libro_singolo);
               final response3 = await http.get(Uri.parse(Config.preferitiUrl),
                 headers: {
                   'Content-Type': 'application/json',
@@ -56,14 +52,14 @@ class _CercaLibriState extends State<Cerca_Libri> {
                 },);
               if (response3.statusCode == 200 || response3.statusCode == 201) {
                 final lista_preferiti = json.decode(response3.body);
-                print(lista_preferiti);
+
                 for (var pref in lista_preferiti) {
                   if (pref['libro'] == libro_singolo['id']) {
-                    print("ciao");
+
                     String id_pref = pref['id'];
                     String fullUrlEliminaPref = '${Config
                         .preferitiUrl}$id_pref/';
-                    print(fullUrlEliminaPref);
+
                     final response4 = await http.delete(
                       Uri.parse(fullUrlEliminaPref),
                       headers: {
@@ -73,7 +69,24 @@ class _CercaLibriState extends State<Cerca_Libri> {
                     );
 
                     if (response4.statusCode == 200 || response4.statusCode == 204) {
-                      print('Eliminazione avvenuta con successo');
+
+                      setState(() {
+                        isbn_preferiti.remove((bookISBN));
+                        widget.dati.value[1].removeWhere((book) {
+                          bool shouldRemove = book['isbn'] == bookData['isbn'];
+                          if (shouldRemove) {
+                            print("Rimuovendo libro con id: ${book['isbn']}");
+                          }
+                          return shouldRemove;
+                        });
+                        widget.dati.value[0].removeWhere((preferito) {
+                          bool shouldRemove = preferito['id'] == id_pref;
+                          if (shouldRemove) {
+                            print("Rimuovendo preferito con id: ${preferito['id']}");
+                          }
+                          return shouldRemove;
+                        });
+                      });
                       return;
                     } else {
                       print('Errore nella richiesta DELETE: ${response4.statusCode}');
@@ -89,8 +102,7 @@ class _CercaLibriState extends State<Cerca_Libri> {
     }
 
     catch (e) {
-      print('Errore durante la chiamata API: $e');
-      return; // Ritorna una lista vuota in caso di eccezione
+      return;
     }
   }
 
@@ -98,16 +110,13 @@ class _CercaLibriState extends State<Cerca_Libri> {
     setState(() {
       isLoadingLike = true;
     });
-    if (likedBooks.contains(bookISBN)) {
-      await elimina_preferito(bookISBN);
-      setState(() {
-        likedBooks.remove(bookISBN);
-      });
+    if (isbn_preferiti.contains(bookISBN)) {
+      await elimina_preferito(bookISBN, bookData);
+
     } else {
       await metti_like(bookData["google_books_id"], bookData);
-      setState(() {
-        likedBooks.add(bookISBN);
-      });
+      widget.dati.value[1].add(bookData);
+      isbn_preferiti.add(bookISBN);
     }
     setState(() {
       isLoadingLike = false;
@@ -116,35 +125,7 @@ class _CercaLibriState extends State<Cerca_Libri> {
 
 
 
-  Future<void> sendText(String text) async {
-    final url = Uri.parse(Config.libroUrl);
-    try {
-      final body = jsonEncode({'nome': text});
-      final response = await http.post(
-        url,
-        headers: {
-          'Authorization': 'Token ${widget.authToken}',
-          'Content-Type': 'application/json',
-        },
-        body: body,
-      );
-
-      if (response.statusCode == 201) {
-        setState(() {
-          _response = jsonDecode(response.body)['message'] ?? 'Successo!';
-        });
-      } else {
-        setState(() {
-          _response = 'Errore: ${response.statusCode}';
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _response = 'Errore: $e';
-      });
-    }
-  }
-
+ /*
   Future<List<dynamic>> fetchPreferiti() async {
     try {
       final response = await http.get(Uri.parse(Config.preferitiUrl));
@@ -160,48 +141,24 @@ class _CercaLibriState extends State<Cerca_Libri> {
       return []; // Ritorna una lista vuota in caso di eccezione
     }
   }
-
+*/
 
   Future<void> fetchBooks(String query) async {
-    int id_utente = 2;
+    
+    if(isbn_preferiti.isEmpty){
+      for(var libro in widget.dati.value[1]){
+        isbn_preferiti.add(libro["isbn"]);
+      }
+    }
+   
+
     setState(() {
       isSearch = true;
     });
-    if (likedBooks.isEmpty) {
-       var lista_preferiti = await fetchPreferiti();
-       for (var preferito in lista_preferiti) {
-         if(preferito['utente'] == id_utente)
-           {
-             try {
-               String id_libro_nei_preferiti = preferito['libro'];
-               String fullUrl = '${Config.libroUrl}$id_libro_nei_preferiti';
-               print(fullUrl);
-               final response = await http.get(
-                 Uri.parse(fullUrl),
-                 headers: {
-                 'Content-Type': 'application/json',
-                 'Authorization': 'Token ${widget.authToken}',
-                 },);
-               if (response.statusCode == 200 || response.statusCode == 201 ) {
-                 final data = json.decode(response.body);
-                 setState(() {
-                   likedBooks.add(data['isbn']);
-                 });
-
-               } else {
-                 print('Errore: ${response.statusCode}');
-               }
-             } catch (e) {
-               print('Errore durante la chiamata API: $e');
-             }
-
-           }
-
-       }
-       print(likedBooks);
 
 
-    }
+
+
     final String apiKey = dotenv.env['API_KEY'] ?? '';
     const String endpoint = 'https://www.googleapis.com/books/v1/volumes';
     final String url = '$endpoint?q=$query&key=$apiKey';
@@ -214,7 +171,6 @@ class _CercaLibriState extends State<Cerca_Libri> {
         if (data != null && data["items"] != null) {
           setState(() {
             _books = data["items"];
-            _genres = [];
             isSearch = false;
           });
         } else {
@@ -235,6 +191,8 @@ class _CercaLibriState extends State<Cerca_Libri> {
         }
   }
 
+
+
   Future<void> metti_like(String id, Map libro) async {
     int id_utente = 2;
     String libro_url = dotenv.env['LIBRO'] ?? '';
@@ -249,11 +207,9 @@ class _CercaLibriState extends State<Cerca_Libri> {
       );
       if (response.statusCode == 200 || response.statusCode == 201) {
         for (var libro_db in jsonDecode(response.body)) {
-          print(libro_db['isbn']);
-          print(libro['isbn']);
+
           if (libro_db['isbn'].toString() == libro['isbn'].toString()) {
 
-            print(Uri.parse(Config.preferitiUrl));
             try{
               final response = await http.get(
                   Uri.parse(Config.preferitiUrl),
@@ -263,7 +219,6 @@ class _CercaLibriState extends State<Cerca_Libri> {
               },);
               if (response.statusCode == 200 || response.statusCode == 201) {
                 for (var preferito_db in jsonDecode(response.body)) {
-
                   if (preferito_db['libro'].toString() == libro_db['id'].toString() &&
                       preferito_db['utente'].toString() == id_utente.toString() )
                   {
@@ -296,6 +251,8 @@ class _CercaLibriState extends State<Cerca_Libri> {
               if (response.statusCode == 200 ||
                   response.statusCode == 201) {
                 print('Successo: ${response.body}');
+                var responseData = jsonDecode(response.body);
+                widget.dati.value[0].add(responseData);
                 return;
               } else {
                 print('Errore: ${response.statusCode}, ${response.body}');
@@ -308,7 +265,7 @@ class _CercaLibriState extends State<Cerca_Libri> {
           }
         }
 
-        //creare il libro e inserirlo nei preferiti
+
 
         try {
           final body = jsonEncode(libro);
@@ -337,7 +294,6 @@ class _CercaLibriState extends State<Cerca_Libri> {
                     String api = dotenv.env['UTENTE'] ?? '';
                     int id_utente = 2;
                     String preferiti = '$api$id_utente/preferiti/';
-
                     String id_libro = libro['id'];
                     try {
                       final body = jsonEncode({'libro': id_libro});
@@ -353,6 +309,9 @@ class _CercaLibriState extends State<Cerca_Libri> {
 
                       if (response.statusCode == 200 ||
                           response.statusCode == 201) {
+                        var responseData = jsonDecode(response.body);
+                        widget.dati.value[0].add(responseData);
+
                         print('Successo: ${response.body}');
                       } else {
                         print('Errore: ${response.statusCode}, ${response.body}');
@@ -374,8 +333,6 @@ class _CercaLibriState extends State<Cerca_Libri> {
         } catch (e) {
           print('Errore durante la richiesta: $e');
         }
-
-
       }
     }
     catch (e) {
@@ -386,97 +343,10 @@ class _CercaLibriState extends State<Cerca_Libri> {
   }
 
 
-  Future<void> fetchGenres() async {
-    final url = Uri.parse(Config.libroUrl);
-    try {
-      final response = await http.get(
-        url,
-        headers: {'Authorization': 'Token ${widget.authToken}'},
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        setState(() {
-          _genres = data;
-          _books = [];
-        });
-      } else {
-        setState(() {
-          _response = 'Errore: ${response.statusCode}';
-        });
-      }
-    } catch (e) {
-      setState(() {
-        _response = 'Errore: $e';
-      });
-    }
-  }
-
-  void _showTextEditor(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Inserisci una stringa'),
-          content: TextField(
-            controller: _controller,
-            decoration: InputDecoration(hintText: 'Scrivi qui...'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                sendText(_controller.text);
-              },
-              child: Text('Invia'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('Annulla'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showBookSearch(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Inserisci il nome'),
-          content: TextField(
-            controller: _controller,
-            decoration: InputDecoration(hintText: 'Scrivi qui...'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                fetchBooks(_controller.text);
-              },
-              child: Text('Invia'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('Annulla'),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
 
   @override
   Widget build(BuildContext context) {
-    // Lista di 50 libri
-    final List<String> libri = List.generate(50, (index) => 'Libro ${index + 1}');
 
     return CustomScrollView(
       slivers: [
@@ -601,15 +471,20 @@ class _CercaLibriState extends State<Cerca_Libri> {
                         toggleLike(libro["isbn"], libro);
 
                       },
-                      child: Icon(
-                        Icons.favorite,
-                        color: _books[index]['volumeInfo'] != null &&
-                            _books[index]['volumeInfo']['industryIdentifiers'] != null &&
-                            _books[index]['volumeInfo']['industryIdentifiers'].isNotEmpty &&
-                            _books[index]['volumeInfo']['industryIdentifiers'][0]['identifier'] != null &&
-                            likedBooks.contains(_books[index]['volumeInfo']['industryIdentifiers'][0]['identifier'])
-                            ? Colors.red
-                            : Colors.grey,
+                      child: Container(
+                        width: 60,
+                        height: 60,
+                        color: Colors.transparent,
+                        child: Icon(
+                          Icons.favorite,
+                          color: _books[index]['volumeInfo'] != null &&
+                              _books[index]['volumeInfo']['industryIdentifiers'] != null &&
+                              _books[index]['volumeInfo']['industryIdentifiers'].isNotEmpty &&
+                              _books[index]['volumeInfo']['industryIdentifiers'][0]['identifier'] != null &&
+                              isbn_preferiti.contains(_books[index]['volumeInfo']['industryIdentifiers'][0]['identifier'])
+                              ? Colors.red
+                              : Colors.grey,
+                        ),
                       )
 
                     ),
