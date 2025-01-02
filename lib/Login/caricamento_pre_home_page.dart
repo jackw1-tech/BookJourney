@@ -1,4 +1,5 @@
 
+import 'package:book_journey/Funzioni.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
@@ -20,11 +21,14 @@ class CaricamentoState extends State<Caricamentoprehomepage> {
   List<dynamic> preferiti = [];
   List<dynamic> likedBooks_detail= [];
   List<dynamic> profilo_lettore =[];
+  List<dynamic> letture_utente = [];
   bool isLoadingDatiCompleti = true;
+
 
   ValueNotifier<List<List<dynamic>>> dati = ValueNotifier<List<List<dynamic>>>( [
     [], // Prima lista vuota
     [], // Seconda lista vuota
+    [],
     [],
   ]
   );
@@ -111,14 +115,31 @@ class CaricamentoState extends State<Caricamentoprehomepage> {
           profilo_lettore.add(json.decode(response_3.body));
         }
 
+
+        final response_4 = await http.get(Uri.parse(
+            Config.lettura_utente),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Token ${widget.authToken}',
+          },
+
+        );
+        if (response_4.statusCode == 200 || response_4.statusCode == 201) {
+          letture_utente = (json.decode(response_4.body));
+        }
+
+
         setState(() {
           isLoadingDatiCompleti = false;
         });
 
 
+
+
         dati.value[0] = preferiti;
         dati.value[1] = likedBooks_detail;
         dati.value[2] = profilo_lettore;
+        dati.value[3] = letture_utente;
 
 
         Navigator.pushReplacement(

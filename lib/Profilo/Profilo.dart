@@ -4,6 +4,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:book_journey/api.dart';
 
+import '../Funzioni.dart';
+
 class Profilo extends StatefulWidget {
   final String authToken;
   ValueNotifier<List<List<dynamic>>> dati = ValueNotifier<List<List<dynamic>>>([]);
@@ -19,6 +21,8 @@ class _ProfiloState extends State<Profilo> {
   String _response = "";
   List<dynamic> _genres = [];
   List<dynamic> _books = [];
+  var utils = Utils();
+
 
   Future<void> elimina_preferito(String bookISBN, Map bookData) async {
     try {
@@ -203,8 +207,39 @@ class _ProfiloState extends State<Profilo> {
 
   }
 
+  Future<void> start_reading(Map libro) async {
+    final Map<String, dynamic> data = utils.componi_Json_prima_lettura(libro);
+    final Uri endpoint = Uri.parse(Config.crea_lettura_utente);
+    try {
+      final response = await http.post(
+        endpoint,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Token ${widget.authToken}',
+        },
+        body: jsonEncode(data),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        print("Lettura inserita con successo");
+        print((response.body));
+        setState(() {
+          var data = response.body;
+          widget.dati.value[3].add(data);
+        });
+
+      } else {
+        print("Errore durante l'inserimento della lettura: ${response.statusCode}");
+        print(response.body);
+      }
+    } catch (e) {
+      print("Errore durante la richiesta: $e");
+    }
+  }
+
+
   void show_preferiti_dialog(Map libro){
-    print({widget.dati.value[2][0]['numero_ore_lettura']}.runtimeType);
+    print( widget.dati.value[3]);
     showDialog(context: context,   builder: (BuildContext context) {
       return SimpleDialog(
         children: [
@@ -224,8 +259,9 @@ class _ProfiloState extends State<Profilo> {
           ),
           const Divider(),
           SimpleDialogOption(
-            onPressed: () {
-              Navigator.pop(context, 'Option 1');
+            onPressed: () async {
+              await start_reading(libro);
+              Navigator.pop(context);
             },
             child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -365,12 +401,12 @@ class _ProfiloState extends State<Profilo> {
                     height: 200, // Altezza della lista orizzontale
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
-                      itemCount: 10,
+                      itemCount: widget.dati.value[3].length,
                       itemBuilder: (context, index) {
                         return Card(
                           child: Padding(
                             padding: const EdgeInsets.all(8.0),
-                            child: Text('Libro ${index + 1}', style: const TextStyle(fontSize: 16)),
+                            child: Text('Libro ${ widget.dati.value[3][index]["libro"] }', style: const TextStyle(fontSize: 16)),
                           ),
                         );
                       },

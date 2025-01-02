@@ -6,8 +6,6 @@ class HomePage extends StatefulWidget {
   final String authToken;
   ValueNotifier<List<List<dynamic>>> dati = ValueNotifier<List<List<dynamic>>>([]);
   HomePage({super.key, required this.authToken, required this.dati});
-
-
   @override
   _HomePageState createState() => _HomePageState();
 }

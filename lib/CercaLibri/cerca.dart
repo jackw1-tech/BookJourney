@@ -207,9 +207,7 @@ class _CercaLibriState extends State<Cerca_Libri> {
       );
       if (response.statusCode == 200 || response.statusCode == 201) {
         for (var libro_db in jsonDecode(response.body)) {
-
           if (libro_db['isbn'].toString() == libro['isbn'].toString()) {
-
             try{
               final response = await http.get(
                   Uri.parse(Config.preferitiUrl),
