@@ -1,3 +1,4 @@
+import 'package:book_journey/LettureInCorso/LettureInCorso.dart';
 import 'package:flutter/material.dart';
 import 'package:book_journey/CercaLibri/cerca.dart';
 import 'package:book_journey/Profilo/Profilo.dart';
@@ -20,9 +21,9 @@ class _HomePageState extends State<HomePage> {
         child: Scaffold(
           body: TabBarView(
             children: [
-              const Tab(text: "Letture in corso"),
-              Cerca_Libri(authToken: widget.authToken, dati: widget.dati,),
-              Profilo(authToken: widget.authToken, dati: widget.dati,)
+             Lettureincorso(authToken: widget.authToken, dati: widget.dati),
+              Cerca_Libri(authToken: widget.authToken, dati: widget.dati),
+              Profilo(authToken: widget.authToken, dati: widget.dati)
             ],
           ),
           bottomNavigationBar: const BottomAppBar(

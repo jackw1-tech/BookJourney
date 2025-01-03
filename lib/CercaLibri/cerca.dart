@@ -114,34 +114,15 @@ class _CercaLibriState extends State<Cerca_Libri> {
       await elimina_preferito(bookISBN, bookData);
 
     } else {
-      await metti_like(bookData["google_books_id"], bookData);
-      widget.dati.value[1].add(bookData);
+      var libro = await metti_like(bookData["google_books_id"], bookData);
+
+      widget.dati.value[1].add(libro);
       isbn_preferiti.add(bookISBN);
     }
     setState(() {
       isLoadingLike = false;
     });
   }
-
-
-
- /*
-  Future<List<dynamic>> fetchPreferiti() async {
-    try {
-      final response = await http.get(Uri.parse(Config.preferitiUrl));
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = json.decode(response.body) as List<dynamic>;
-        return data; // Converte List<dynamic> in List<String>
-      } else {
-        print('Errore: ${response.statusCode}');
-        return []; // Ritorna una lista vuota in caso di errore
-      }
-    } catch (e) {
-      print('Errore durante la chiamata API: $e');
-      return []; // Ritorna una lista vuota in caso di eccezione
-    }
-  }
-*/
 
   Future<void> fetchBooks(String query) async {
     
@@ -193,7 +174,7 @@ class _CercaLibriState extends State<Cerca_Libri> {
 
 
 
-  Future<void> metti_like(String id, Map libro) async {
+  Future<Map<dynamic,dynamic>?> metti_like(String id, Map libro) async {
     int id_utente = 2;
     String libro_url = dotenv.env['LIBRO'] ?? '';
     try {
@@ -220,7 +201,7 @@ class _CercaLibriState extends State<Cerca_Libri> {
                   if (preferito_db['libro'].toString() == libro_db['id'].toString() &&
                       preferito_db['utente'].toString() == id_utente.toString() )
                   {
-                    return;
+                    return libro_db;
                   }
                 }
               }
@@ -251,7 +232,7 @@ class _CercaLibriState extends State<Cerca_Libri> {
                 print('Successo: ${response.body}');
                 var responseData = jsonDecode(response.body);
                 widget.dati.value[0].add(responseData);
-                return;
+                return libro_db;
               } else {
                 print('Errore: ${response.statusCode}, ${response.body}');
               }
@@ -309,7 +290,7 @@ class _CercaLibriState extends State<Cerca_Libri> {
                           response.statusCode == 201) {
                         var responseData = jsonDecode(response.body);
                         widget.dati.value[0].add(responseData);
-
+                        return libro;
                         print('Successo: ${response.body}');
                       } else {
                         print('Errore: ${response.statusCode}, ${response.body}');
@@ -398,8 +379,8 @@ class _CercaLibriState extends State<Cerca_Libri> {
         ),
       ),
           SizedBox(height: 10.0),
-          const Text(
-            'Results:',
+          Text(
+            _books.isNotEmpty? 'Results:' : '',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           SizedBox(height: 10.0),
