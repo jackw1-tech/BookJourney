@@ -455,7 +455,7 @@ class _ProfiloState extends State<Profilo> {
                       scrollDirection: Axis.horizontal,
                       itemCount: widget.dati.value[3].length,
                       itemBuilder: (context, index) {
-                        var libroTrovato = widget.dati.value[1].firstWhere(
+                        var libroTrovato = widget.dati.value[4].firstWhere(
                               (elemento) => elemento['id'] == widget.dati.value[3][index]['libro'],
                           orElse: () => null,
                         );
@@ -531,7 +531,7 @@ class _ProfiloState extends State<Profilo> {
                             ),
                           ),
                           onTap: () {
-                            howPreferitiDialog(libroTrovato);
+                            showLibreriaDialog(libroTrovato);
                           },
                         );
                       },

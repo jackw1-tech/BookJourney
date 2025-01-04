@@ -30,6 +30,7 @@ class CaricamentoState extends State<Caricamentoprehomepage> {
     [],
     [],
     [],
+    [],
   ]);
 
   Future<void> fetchISBNPreferiti() async {
@@ -113,13 +114,10 @@ class CaricamentoState extends State<Caricamentoprehomepage> {
         }
 
 
-        print(likedBooks_detail.length);
-        print(likedBooks_detail.runtimeType);
-
-
         dati.value[1] = likedBooks_detail;
         dati.value[2] = profilo_lettore;
         dati.value[3] = letture_utente;
+        dati.value[4] = Books_detail;
 
 
         Navigator.pushReplacement(

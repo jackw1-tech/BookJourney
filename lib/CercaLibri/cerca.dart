@@ -115,8 +115,8 @@ class _CercaLibriState extends State<Cerca_Libri> {
 
     } else {
       var libro = await metti_like(bookData["google_books_id"], bookData);
-
       widget.dati.value[1].add(libro);
+      widget.dati.value[4].insert(widget.dati.value[4].length,libro);
       isbn_preferiti.add(bookISBN);
     }
     setState(() {
