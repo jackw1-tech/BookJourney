@@ -35,7 +35,9 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
   @override
   Widget build(BuildContext context) {
-    return const LoginPage();
+    return const PopScope(
+        canPop: false,
+        child:  LoginPage());
   }
 
 }

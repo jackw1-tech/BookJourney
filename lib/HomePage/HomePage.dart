@@ -6,7 +6,8 @@ import 'package:book_journey/Profilo/Profilo.dart';
 class HomePage extends StatefulWidget {
   final String authToken;
   ValueNotifier<List<List<dynamic>>> dati = ValueNotifier<List<List<dynamic>>>([]);
-  HomePage({super.key, required this.authToken, required this.dati});
+  final int id_utente;
+  HomePage({super.key, required this.authToken, required this.dati, required this.id_utente});
   @override
   _HomePageState createState() => _HomePageState();
 }
@@ -16,14 +17,17 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return ValueListenableBuilder(valueListenable: widget.dati, builder: (context, value, child)
     {
-      return DefaultTabController(
+      return PopScope(
+          canPop: false,
+          child:
+          DefaultTabController(
         length: 3,
         child: Scaffold(
           body: TabBarView(
             children: [
-             Lettureincorso(authToken: widget.authToken, dati: widget.dati),
-              Cerca_Libri(authToken: widget.authToken, dati: widget.dati),
-              Profilo(authToken: widget.authToken, dati: widget.dati)
+             Lettureincorso(authToken: widget.authToken, dati: widget.dati, id_utente: widget.id_utente,),
+              CercaLibri(authToken: widget.authToken, dati: widget.dati, idUtente: widget.id_utente,),
+              Profilo(authToken: widget.authToken, dati: widget.dati, id_utente: widget.id_utente,)
             ],
           ),
           bottomNavigationBar: const BottomAppBar(
@@ -43,7 +47,7 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         ),
-      )
+      ) )
     ;
     });
   }

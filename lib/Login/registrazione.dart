@@ -1,23 +1,50 @@
-import 'package:book_journey/Login/registrazione.dart';
+import 'package:book_journey/Login/login.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:book_journey/api.dart';
 import 'caricamento_pre_home_page.dart';
 
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+class Registrazione extends StatefulWidget {
 
   @override
-  _LoginPageState createState() => _LoginPageState();
+  _RegistrazionenPageState createState() => _RegistrazionenPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _RegistrazionenPageState extends State<Registrazione> {
   String _authToken = "";
   bool isLoading = false;
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _obscureText = true;
+
+  Future<void> registration(String username, String password) async {
+    setState(() {
+      isLoading = true;
+    });
+
+    final url = Uri.parse(Config.auth_login);
+
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'username': username, 'password': password, 'email': '$username@gmail.com'}),
+      );
+      print('Response body: ${response.body}');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        await authenticate(username, password);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Registration failed: ${response.body}')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('An error occurred: $e')),
+      );
+    }
+  }
 
   Future<void> authenticate(String username, String password) async {
     setState(() {
@@ -30,7 +57,6 @@ class _LoginPageState extends State<LoginPage> {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'username': username, 'password': password}),
       );
-
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         setState(() {
@@ -47,6 +73,7 @@ class _LoginPageState extends State<LoginPage> {
       );
     }
   }
+
 
   Future<int?> ottengo_id() async {
     final url = Uri.parse(Config.auth_me);
@@ -77,6 +104,8 @@ class _LoginPageState extends State<LoginPage> {
     return null;
   }
 
+
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -97,23 +126,24 @@ class _LoginPageState extends State<LoginPage> {
       body: Stack(
         children: [
           Positioned(
-            child: Column(
-              children: [
-                Container(
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF06402B),
-                  ),
-                  height: 390,
-                ),
-                Expanded(
-                  child: Container(
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFEBEBEB),
+              child:
+              Column(
+                  children: [
+                    Container(
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF06402B),
+                      ),
+                      height: 390,
                     ),
-                  ),
-                ),
-              ],
-            ),
+                    Expanded(child:
+                    Container(
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFEBEBEB),
+                      ),
+                    ),
+                    ),
+                  ]
+              )
           ),
           Positioned(
             top: 328,
@@ -121,10 +151,11 @@ class _LoginPageState extends State<LoginPage> {
               child: Container(
                 width: MediaQuery.of(context).size.width,
                 height: 120,
-                color: const Color(0xFFEBEBEB),
+                color: const Color(0xFF06402B),
               ),
             ),
           ),
+
           SingleChildScrollView(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 40.0),
@@ -145,13 +176,12 @@ class _LoginPageState extends State<LoginPage> {
                     color: Colors.white,
                     elevation: 20,
                     child: Padding(
-                      padding: const EdgeInsets.only(
-                          top: 40.0, left: 40, right: 40, bottom: 70),
+                      padding: const EdgeInsets.only(top: 40.0, left: 40, right: 40, bottom: 70),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           const Text(
-                            "Welcome back",
+                            "Sign Up",
                             style: TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
@@ -164,11 +194,9 @@ class _LoginPageState extends State<LoginPage> {
                             controller: _usernameController,
                             decoration: InputDecoration(
                               hintText: 'Username',
-                              contentPadding:
-                              const EdgeInsets.only(left: 10.0),
+                              contentPadding: const EdgeInsets.only(left: 10.0),
                               prefixIcon: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    vertical: 15, horizontal: 15),
+                                padding: const EdgeInsets.symmetric(vertical:15, horizontal: 15),
                                 child: Image.asset(
                                   'assets/images/user.ico',
                                   width: 20,
@@ -197,11 +225,9 @@ class _LoginPageState extends State<LoginPage> {
                             obscureText: _obscureText,
                             decoration: InputDecoration(
                               hintText: 'Password',
-                              contentPadding:
-                              const EdgeInsets.only(left: 10.0),
+                              contentPadding: const EdgeInsets.only(left: 10.0),
                               prefixIcon: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    vertical: 15, horizontal: 15),
+                                padding: const EdgeInsets.symmetric(vertical:15, horizontal: 15),
                                 child: Image.asset(
                                   'assets/images/key.png',
                                   width: 20,
@@ -210,10 +236,8 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                               suffixIcon: IconButton(
                                 icon: Icon(
-                                  _obscureText
-                                      ? Icons.visibility
-                                      : Icons.visibility_off,
-                                  color: const Color(0xFF06402B),
+                                  _obscureText ? Icons.visibility: Icons.visibility_off ,
+                                  color: Color(0xFF06402B),
                                 ),
                                 onPressed: () {
                                   setState(() {
@@ -250,12 +274,12 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                             ),
                             onPressed: () async {
-                              await authenticate(
+                              await registration(
                                 _usernameController.text,
                                 _passwordController.text,
                               );
                               int? id = await ottengo_id();
-                              _authToken.isNotEmpty? Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Caricamentoprehomepage(authToken: _authToken, id_utente: id!,prima_volta: false,))) : null;
+                              _authToken.isNotEmpty? Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Caricamentoprehomepage(authToken: _authToken, id_utente: id!,prima_volta: true,))) : null;
                             },
                             child: isLoading
                                 ? const SizedBox(
@@ -263,13 +287,12 @@ class _LoginPageState extends State<LoginPage> {
                               height: 20.0,
                               child: CircularProgressIndicator(
                                 valueColor:
-                                AlwaysStoppedAnimation<Color>(
-                                    Colors.white),
+                                AlwaysStoppedAnimation<Color>(Colors.white),
                                 strokeWidth: 2.0,
                               ),
                             )
                                 : const Text(
-                              'Login',
+                              'Register',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 17,
@@ -280,39 +303,30 @@ class _LoginPageState extends State<LoginPage> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Text(
-                                "Don't have an account?",
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  color: Color(0xFF06402B),
-                                  fontFamily: 'Roboto',
-                                ),
-                              ),
+                              const Text("Already have an account?", style: TextStyle(
+                                fontSize: 15,
+                                color: Color(0xFF06402B),
+                                fontFamily: 'Roboto',
+                              ),),
                               const SizedBox(width: 5),
-                              Column(
-                                children: [
-                                  GestureDetector(
-                                    onTap: () {
-                                      Navigator.pushReplacement(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => Registrazione(),
-                                        ),
-                                      );
-                                    },
-                                    child: const Text(
-                                      "Sign Up",
-                                      style: TextStyle(
-                                        decoration: TextDecoration.underline,
-                                        fontSize: 16,
-                                        color: Color(0xFF06402B),
-                                        fontFamily: 'Roboto',
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                              Column(children: [
+                                GestureDetector(
+                                  onTap: () {
+                                    Navigator.pushReplacement( context,  MaterialPageRoute( builder: (context) => const LoginPage() ),
+                                    );
+                                  },
+                                  child:  const Text("Sign In",
+                                    style: TextStyle(
+                                      decoration: TextDecoration.underline,
+                                      fontSize: 16,
+                                      color: Color(0xFF06402B),
+                                      fontFamily: 'Roboto',
+                                      fontWeight: FontWeight.bold,
+                                    ),),
+                                )
+
+
+                              ],)
                             ],
                           ),
                         ],
@@ -323,6 +337,7 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
           ),
+
         ],
       ),
     ));

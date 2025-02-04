@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:book_journey/api.dart';
+import 'package:intl/intl.dart';
 import '../Funzioni.dart';
 
 class Profilo extends StatefulWidget {
   final String authToken;
   ValueNotifier<List<List<dynamic>>> dati = ValueNotifier<List<List<dynamic>>>([]);
-
-  Profilo({super.key, required this.authToken, required this.dati });
+  final int id_utente;
+  Profilo({super.key, required this.authToken, required this.dati, required this.id_utente });
 
   @override
   _ProfiloState createState() => _ProfiloState();
@@ -17,6 +18,17 @@ class Profilo extends StatefulWidget {
 class _ProfiloState extends State<Profilo> {
 
   var utils = Utils();
+
+  Color _getColorForStato(String stato) {
+
+    if (stato == "completato") {
+      return const Color(0xFF06402B);
+    } else if (stato == "interrotto") {
+      return const Color(0xFFFF0000);
+    } else {
+      return Colors.amber;
+    }
+  }
 
 
   Future<void> eliminaPreferito(String bookISBN, Map bookData) async {
@@ -90,49 +102,74 @@ class _ProfiloState extends State<Profilo> {
     }
   }
 
-
-
-
-
-  Future<void> markAsDoneBook(Map libro, bool iniziato) async {
+  Future<void> markAsDoneBook(Map libro, bool iniziato, {Map? lettura}) async {
     List<dynamic> datiAttuali = widget.dati.value[2];
 
+
+    num numero_pagine_gia_lette = 0;
+    if(iniziato)
+      {
+        for(var sessione_lettura in widget.dati.value[5])
+          {
+            if(sessione_lettura['libro'] == libro['id'])
+              {
+                numero_pagine_gia_lette += sessione_lettura['numero_pagine_lette'].toInt();
+              }
+          }
+      }
+
     datiAttuali[0]['numero_libri_letti'] += 1;
-    datiAttuali[0]['numero_pagine_lette'] += (libro['numero_pagine']);
+
+    print(datiAttuali[0]['numero_pagine_lette']);
+    var pagine_al_minuto_lette_fixed =  datiAttuali[0]['pagine_al_minuto_lette'] == 0 ? 0.8 :  datiAttuali[0]['pagine_al_minuto_lette'];
+    if(lettura != null) {
+      datiAttuali[0]['numero_pagine_lette'] += lettura['numero_pagine_lette'] - numero_pagine_gia_lette;
+      print(datiAttuali[0]['numero_pagine_lette']);
+    } else {
+      datiAttuali[0]['numero_pagine_lette'] +=  (libro['numero_pagine']);
+    }
+
     datiAttuali[0]['numero_ore_lettura'] =
         (datiAttuali[0]['numero_pagine_lette'] /
-            datiAttuali[0]['pagine_al_minuto_lette']) ~/ 60;
+            pagine_al_minuto_lette_fixed) / 60;
     datiAttuali[0]['numero_giorni_lettura'] =
-        datiAttuali[0]['numero_ore_lettura']  ~/ 24;
+        datiAttuali[0]['numero_ore_lettura']  / 24;
     datiAttuali[0]['numero_mesi_lettura'] =
-        datiAttuali[0]['numero_giorni_lettura'] ~/ 30;
+        datiAttuali[0]['numero_giorni_lettura'] / 30;
+
 
 
     setState(() {
       widget.dati.value[2][0] = datiAttuali[0];
     });
 
+    print(widget.dati.value[2][0]['numero_pagine_lette']);
+    String id = widget.id_utente.toString();
+    String profiloLettoreUrl = '${Config.profilo_lettoreURL}$id/';
 
-    String profiloLettoreUrl = '${Config.profilo_lettoreURL}2/';
+    final response = await http.put(Uri.parse(profiloLettoreUrl),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Token ${widget.authToken}',
+          },
+          body: jsonEncode(widget.dati.value[2][0]),
 
-    final response = await http.put(Uri.parse(
-        profiloLettoreUrl),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Token ${widget.authToken}',
-      },
-      body: jsonEncode(widget.dati.value[2][0]),
+        );
 
-    );
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      startReading(libro, true);
-    }
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          if(!iniziato)
+              startReading(libro, true, pagine_al_minuto_lette_fixed);
+
+        }
+
+
   }
 
-  Future<void> startReading(Map libro, bool completato) async {
+  Future<void> startReading(Map libro, bool completato, double pagine_al_minuto_lette) async {
 
-    final Map<String, dynamic> data = utils.componi_Json_prima_lettura(libro, completato);
-    final Uri endpoint = Uri.parse(Config.crea_lettura_utente);
+    final Map<String, dynamic> data = utils.componi_Json_prima_lettura(libro, completato, pagine_al_minuto_lette);
+    print(data);
+    final Uri endpoint = Uri.parse(Config.crea_lettura_utente + widget.id_utente.toString() + "/lettura/");
     try {
      final response = await http.post(
         endpoint,
@@ -142,12 +179,11 @@ class _ProfiloState extends State<Profilo> {
         },
         body: jsonEncode(data),
      );
+     print(response.statusCode);
          if (response.statusCode == 200 || response.statusCode == 201){
-           print(jsonDecode(response.body));
            setState(() {
              widget.dati.value[3].add(jsonDecode(response.body));
            });
-
     }
 
 
@@ -156,12 +192,146 @@ class _ProfiloState extends State<Profilo> {
     }
   }
 
+  Future<void> elimina_lettura(Map lettura) async {
+    final start = Config.lettura_utente + widget.id_utente.toString() + "/" + lettura['libro'];
+    final Uri endpoint = Uri.parse(start);
 
-  void howPreferitiDialog(Map libro) {
+    final risposta = await http.delete(
+      endpoint,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Token ${widget.authToken}',
+      },
+    );
+
+    if (risposta.statusCode == 204)
+      {
+        setState(() {
+          widget.dati.value[3].remove(lettura);
+        });
+      }
+
+
+  }
+
+  Future<void> interrompi_lettura(Map lettura) async {
+    lettura['iniziato'] = false;
+    lettura['interrotto'] = true;
+    final start = Config.lettura_utente  + widget.id_utente.toString() + "/" +lettura['libro'];
+    final Uri endpoint = Uri.parse(start);
+    final risposta = await http.put(
+      endpoint,
+      headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Token ${widget.authToken}',
+      },
+      body: jsonEncode(lettura)
+    );
+    if(risposta.statusCode == 200 || risposta.statusCode == 201)
+      {
+        for(var lettura_caricata in widget.dati.value[3] )
+        {
+          if (lettura_caricata['id'] == lettura['id'])
+          {
+            setState(() {
+              lettura_caricata['iniziato'] = false;
+              lettura_caricata['interrotto'] = true;
+            });
+          }
+        }
+
+
+      }
+
+
+  }
+
+  Future<void> riprendi_lettura(Map lettura) async {
+    lettura['iniziato'] = true;
+    lettura['interrotto'] = false;
+    final start = Config.lettura_utente + widget.id_utente.toString() + "/" + lettura['libro'];
+    final Uri endpoint = Uri.parse(start);
+    final risposta = await http.put(
+        endpoint,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Token ${widget.authToken}',
+        },
+        body: jsonEncode(lettura)
+    );
+    if(risposta.statusCode == 200 || risposta.statusCode == 201)
+    {
+      for(var lettura_caricata in widget.dati.value[3] )
+        {
+          if (lettura_caricata['id'] == lettura['id'])
+              {
+                setState(() {
+                  lettura_caricata['iniziato'] = true;
+                  lettura_caricata['interrotto'] = false;
+                });
+              }
+        }
+
+
+
+
+
+    }
+
+
+  }
+
+  Future<void> completa_lettura(Map lettura, Map libro, double pagine_lette_al_minuto) async {
+    lettura['interrotto'] = false;
+    lettura['interrotto'] = false;
+    lettura['completato'] = true;
+    lettura['data_fine_lettura'] = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    lettura['numero_pagine_lette'] = libro['numero_pagine'];
+    lettura['percentuale'] = "100";
+    lettura['tempo_di_lettura_secondi'] = (lettura['numero_pagine_lette'] * pagine_lette_al_minuto * 60).toInt();
+
+    final start = Config.lettura_utente + widget.id_utente.toString() + "/" + lettura['libro'];
+    final Uri endpoint = Uri.parse(start);
+    final risposta = await http.put(
+        endpoint,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Token ${widget.authToken}',
+        },
+        body: jsonEncode(lettura)
+    );
+
+    if(risposta.statusCode == 200 || risposta.statusCode == 201)
+    {
+      for(var lettura_caricata in widget.dati.value[3] )
+      {
+        if (lettura_caricata['id'] == lettura['id'])
+        {
+          setState(() {
+            lettura_caricata['interrotto'] = false;
+            lettura_caricata['iniziato'] = false;
+            lettura_caricata['completato'] = true;
+            lettura_caricata['data_fine_lettura'] = DateFormat('yyyy-MM-dd').format(DateTime.now());
+            lettura_caricata['numero_pagine_lette'] = libro['numero_pagine'];
+            lettura_caricata['percentuale'] = "100";
+            lettura_caricata['tempo_di_lettura_secondi'] = (lettura_caricata['numero_pagine_lette'] * pagine_lette_al_minuto * 60).toInt();
+          });
+        }
+      }
+      print(lettura);
+      await markAsDoneBook(libro, true, lettura: lettura);
+
+    }
+
+
+  }
+
+
+  void showPreferitiDialog(Map libro, Map Lettura) {
+
     showDialog(context: context, builder: (BuildContext context) {
       return SimpleDialog(
         children: [
-
         SimpleDialogOption(
             onPressed: () async {
               await eliminaPreferito(libro['isbn'], libro);
@@ -176,12 +346,12 @@ class _ProfiloState extends State<Profilo> {
                 ]
             ),
           ),
-          const Divider(),
-          SimpleDialogOption(
+          if(Lettura["id"] == "N/A") const Divider(),
+          if(Lettura["id"] == "N/A") SimpleDialogOption(
             onPressed: () async {
-              await startReading(libro, false);
+              await startReading(libro, false, 0);
               Navigator.pop(context);
-            },
+            } ,
             child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -191,8 +361,8 @@ class _ProfiloState extends State<Profilo> {
                 ]
             ),
           ),
-          const Divider(),
-          SimpleDialogOption(
+          if(Lettura["id"] == "N/A") const Divider(),
+          if(Lettura["id"] == "N/A") SimpleDialogOption(
             onPressed: () async {
               await markAsDoneBook(libro, false);
               Navigator.pop(context);
@@ -215,14 +385,13 @@ class _ProfiloState extends State<Profilo> {
     );
   }
 
-
-  void showLibreriaDialog(Map libro) {
+  void showLibreriaDialog(Map libro, Map Lettura, double pagine_lette_al_minuto) {
     showDialog(context: context, builder: (BuildContext context) {
       return SimpleDialog(
         children: [
           SimpleDialogOption(
             onPressed: () async {
-              await eliminaPreferito(libro['isbn'], libro);
+              await elimina_lettura(Lettura);
               Navigator.pop(context);
             },
             child: const Row(
@@ -234,25 +403,25 @@ class _ProfiloState extends State<Profilo> {
                 ]
             ),
           ),
-          const Divider(),
-          SimpleDialogOption(
+          Lettura['completato'] == false ? const Divider() : SizedBox(),
+          Lettura['completato'] == false ? SimpleDialogOption(
             onPressed: () async {
-              await startReading(libro, false);
+              Lettura['interrotto'] == false ? await interrompi_lettura(Lettura) : (await riprendi_lettura(Lettura));
               Navigator.pop(context);
             },
-            child: const Row(
+            child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('Stop reading', textAlign: TextAlign.center,),
-                  SizedBox(width: 5),
-                  Icon(Icons.stop_circle_rounded, color: Color(0xFF06402B),)
+                  Lettura['interrotto'] == false ? Text('Stop reading', textAlign: TextAlign.center) : Text('Resume reading', textAlign: TextAlign.center,) ,
+                  const SizedBox(width: 5),
+                  Lettura['interrotto'] == false ? const Icon(Icons.stop_circle_rounded, color: Color(0xFF06402B),) : const Icon(Icons.restart_alt, color: Color(0xFF06402B),)
                 ]
             ),
-          ),
-          const Divider(),
-          SimpleDialogOption(
+          ) : SizedBox(),
+          Lettura['completato'] == false ?  const Divider() : SizedBox(),
+          Lettura['completato'] == false ? SimpleDialogOption(
             onPressed: () async {
-              await markAsDoneBook(libro, true);
+              await completa_lettura(Lettura, libro, pagine_lette_al_minuto);
               Navigator.pop(context);
             },
             child: const Row(
@@ -263,7 +432,7 @@ class _ProfiloState extends State<Profilo> {
                   Icon(Icons.incomplete_circle, color: Color(0xFF06402B),)
                 ]
             ),
-          ),
+          ) : SizedBox(),
 
 
         ],
@@ -275,7 +444,14 @@ class _ProfiloState extends State<Profilo> {
 
   @override
   Widget build(BuildContext context) {
-    return NestedScrollView(
+    var months = widget.dati.value[2][0]['numero_mesi_lettura'] >= 1 ? widget.dati.value[2][0]['numero_mesi_lettura'] : 0;
+    var days = widget.dati.value[2][0]['numero_giorni_lettura']>=1 ? widget.dati.value[2][0]['numero_giorni_lettura'] - (months * 30) : 0;
+    var hours = widget.dati.value[2][0]['numero_ore_lettura'] - (days.truncate() * 24);
+
+
+    return PopScope(
+        canPop: false,
+        child:  NestedScrollView(
       headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
         return <Widget>[
           const SliverAppBar(
@@ -304,10 +480,10 @@ class _ProfiloState extends State<Profilo> {
                     elevation: 5,
                     shape: RoundedRectangleBorder(
                       side: const BorderSide(
-                        color: Colors.black, // Colore del bordo
-                        width: 1.0, // Spessore del bordo
+                        color: Colors.black,
+                        width: 1.0,
                       ),
-                      borderRadius: BorderRadius.circular(10), // Raggio degli angoli
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: SizedBox(
                       width: 500,
@@ -334,7 +510,7 @@ class _ProfiloState extends State<Profilo> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Text(
-                                    '${widget.dati.value[2][0]['numero_mesi_lettura'].toStringAsFixed(0)}',
+                                    '${months.toStringAsFixed(0)}',
                                     style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                                   ),
                                   const Text(
@@ -348,7 +524,7 @@ class _ProfiloState extends State<Profilo> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Text(
-                                    '${(widget.dati.value[2][0]['numero_giorni_lettura'] - (widget.dati.value[2][0]['numero_mesi_lettura'] * 30)).toStringAsFixed(0)}',
+                                    '${days.toStringAsFixed(0)}',
                                     style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                                   ),
                                   const Text(
@@ -362,7 +538,7 @@ class _ProfiloState extends State<Profilo> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Text(
-                                    '${(widget.dati.value[2][0]['numero_ore_lettura'] - (widget.dati.value[2][0]['numero_giorni_lettura'] * 24)).toStringAsFixed(0)}',
+                                    '${hours.toStringAsFixed(0)}',
                                     style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                                   ),
                                   const Text(
@@ -398,7 +574,7 @@ class _ProfiloState extends State<Profilo> {
                       style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                   ),
-                  SizedBox(
+                  widget.dati.value[1].length != 0 ? SizedBox(
                     height: 380,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
@@ -408,15 +584,20 @@ class _ProfiloState extends State<Profilo> {
                         var imageUrl = book['copertina_url'];
                         var titolo = book['titolo'];
 
+                        var letturaTrovata = widget.dati.value[3].firstWhere(
+                              (elemento) => elemento['libro'] == book['id'],
+                          orElse: () => {'id': "N/A"}
+                        );
+
                         return GestureDetector(
                           child: Card(
                             elevation: 5,
                             shape: RoundedRectangleBorder(
                               side: const BorderSide(
-                                color: Colors.black, // Colore del bordo
-                                width: 0.5, // Spessore del bordo
+                                color: Colors.black,
+                                width: 0.5,
                               ),
-                              borderRadius: BorderRadius.circular(10), // Raggio degli angoli
+                              borderRadius: BorderRadius.circular(10),
                             ),
                             child: Padding(
                               padding: const EdgeInsets.all(8.0),
@@ -435,12 +616,30 @@ class _ProfiloState extends State<Profilo> {
                             ),
                           ),
                           onTap: () {
-                            howPreferitiDialog(book);
+                            showPreferitiDialog(book, letturaTrovata);
                           },
                         );
                       },
                     ),
-                  ),
+                  ) : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(height: 20),
+                          Image.asset(
+                          'assets/images/wounded-heart.png',
+                          width: 100,
+                          height: 100,
+                        ),
+                          const Text("No books in favorites", style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Roboto',
+                          ),)],
+                      )
+                  ]),
                   const SizedBox(height: 30),
                   const Align(
                     alignment: Alignment.centerLeft,
@@ -449,7 +648,7 @@ class _ProfiloState extends State<Profilo> {
                       style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                   ),
-                  SizedBox(
+                  widget.dati.value[3].length != 0 ? SizedBox(
                     height: 380,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
@@ -457,6 +656,11 @@ class _ProfiloState extends State<Profilo> {
                       itemBuilder: (context, index) {
                         var libroTrovato = widget.dati.value[4].firstWhere(
                               (elemento) => elemento['id'] == widget.dati.value[3][index]['libro'],
+                          orElse: () => null,
+                        );
+
+                        var letturaTrovata = widget.dati.value[3].firstWhere(
+                              (elemento) => elemento['libro'] == libroTrovato['id'],
                           orElse: () => null,
                         );
 
@@ -474,8 +678,8 @@ class _ProfiloState extends State<Profilo> {
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
                               side: const BorderSide(
-                                color: Colors.black, // Colore del bordo
-                                width: 0.5, // Spessore del bordo
+                                color: Colors.black,
+                                width: 0.5,
                               ),
                             ),
                             child: Padding(
@@ -503,13 +707,9 @@ class _ProfiloState extends State<Profilo> {
                                           LinearProgressIndicator(
                                             value: double.parse(widget.dati.value[3][index]["percentuale"]) / 100,
                                             minHeight: 20,
-                                            backgroundColor: Colors.grey[300],
-                                            color: stato == "completato"
-                                                ? const Color(0xFF06402B)
-                                                : stato == "interrotto"
-                                                ? Colors.red
-                                                : Colors.amber,
+                                            color: _getColorForStato(stato),
                                           ),
+
                                           Positioned.fill(
                                             child: Center(
                                               child: Text(
@@ -531,18 +731,36 @@ class _ProfiloState extends State<Profilo> {
                             ),
                           ),
                           onTap: () {
-                            showLibreriaDialog(libroTrovato);
+                            showLibreriaDialog(libroTrovato,letturaTrovata, widget.dati.value[2][0]['pagine_al_minuto_lette']);
                           },
                         );
                       },
                     ),
-                  ),
+                  )  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(height: 20),
+                            Image.asset(
+                              'assets/images/library.png',
+                              width: 100,
+                              height: 100,
+                            ),
+                            const Text("No books in the library", style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Roboto',
+                            ),)],
+                        )
+                      ]),
                 ],
               ),
             ),
           ],
         ),
       ),
-    );
+    ));
   }
 }

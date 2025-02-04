@@ -9,8 +9,10 @@ import '../HomePage/HomePage.dart';
 
 class Caricamentoprehomepage extends StatefulWidget {
   final String authToken;
+  final int id_utente;
+  final bool prima_volta;
 
-  const Caricamentoprehomepage({super.key, required this.authToken});
+  const Caricamentoprehomepage({super.key, required this.authToken, required this.id_utente, required this.prima_volta});
 
   @override
   CaricamentoState createState() => CaricamentoState();
@@ -22,6 +24,7 @@ class CaricamentoState extends State<Caricamentoprehomepage> {
   List<dynamic> likedBooks_detail = [];
   List<dynamic> profilo_lettore = [];
   List<dynamic> letture_utente = [];
+  List<dynamic> sessioni_lettura_utente = [];
   bool isLoadingDatiCompleti = true;
 
 
@@ -31,22 +34,58 @@ class CaricamentoState extends State<Caricamentoprehomepage> {
     [],
     [],
     [],
+    [],
   ]);
 
   Future<void> fetchISBNPreferiti() async {
-    String idUtente = '2';
     try {
-      String url_base = Config.preferitiUrl;
-      String url_finale = 'utente/2';
-      String preferiti_url = '$url_base$url_finale';
-      print(preferiti_url);
+      if(widget.prima_volta)
+        {
+          final response_3 = await http.post(
+            Uri.parse(Config.profilo_utente),
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Token ${widget.authToken}',
+              },
+            body: jsonEncode({'avatar': null, 'user': widget.id_utente}),
+          );
+
+          if (response_3.statusCode == 200 || response_3.statusCode == 201) {
+
+            String id = widget.id_utente.toString();
+            String url_base_profilo = "${Config.utente}$id/profilo-lettore/";
+            final response_3 = await http.post(
+              Uri.parse(url_base_profilo),
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Token ${widget.authToken}',
+              },
+              body: jsonEncode({
+                "numero_ore_lettura": 0,
+                "numero_giorni_lettura": 0,
+                "numero_mesi_lettura": 0,
+                "pagine_al_minuto_lette": 0.5,
+                "numero_libri_letti": 0,
+                "numero_libri_in_corso": 0,
+                "numero_libri_interrotti": 0,
+                "numero_pagine_lette": 0,
+                "numero_sessioni_lettura": 0
+              }),
+            );
+            print(response_3.body);
+            if (response_3.statusCode != 200 && response_3.statusCode != 201) {
+
+              return;
+            }
+
+          }
+
+        }
 
       final response = await http.get(Uri.parse(Config.preferitiUrl));
-
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = json.decode(response.body) as List<dynamic>;
         preferiti = data;
-
         try {
               final response = await http.get(
                 Uri.parse(Config.libroUrl),
@@ -64,7 +103,7 @@ class CaricamentoState extends State<Caricamentoprehomepage> {
 
 
         String url_base_profilo = Config.profilo_lettoreURL;
-        String profilo_lettore_url = url_base_profilo + idUtente + '/';
+        String profilo_lettore_url = '$url_base_profilo${widget.id_utente}/';
 
         final response_3 = await http.get(Uri.parse(profilo_lettore_url),
             headers: {
@@ -76,7 +115,7 @@ class CaricamentoState extends State<Caricamentoprehomepage> {
           profilo_lettore.add(json.decode(response_3.body));
         }
 
-        final response_4 = await http.get(Uri.parse(Config.lettura_utente),
+        final response_4 = await http.get(Uri.parse("${Config.lettura_utente}${widget.id_utente}/"),
             headers: {
               'Content-Type': 'application/json',
               'Authorization': 'Token ${widget.authToken}',
@@ -86,6 +125,15 @@ class CaricamentoState extends State<Caricamentoprehomepage> {
           letture_utente = (json.decode(response_4.body));
         }
 
+        final response_5 = await http.get(Uri.parse("${Config.dettagli_sessione_lettura}${widget.id_utente}/"),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Token ${widget.authToken}',
+            });
+
+        if (response_5.statusCode == 200 || response_5.statusCode == 201) {
+          sessioni_lettura_utente = (json.decode(response_5.body));
+        }
         setState(() {
           isLoadingDatiCompleti = false;
         });
@@ -95,22 +143,20 @@ class CaricamentoState extends State<Caricamentoprehomepage> {
 
 
         for (var preferito in dati.value[0]) {
+          if(preferito['utente'] == widget.id_utente.toString())
+            {
+              var libroTrovato = Books_detail.firstWhere(
+                    (libro) => libro['id'] == preferito['libro'],
+                orElse: () => null,
+              );
 
 
-          print(preferito);
+              if (libroTrovato != null) {
+                likedBooks_detail.add(libroTrovato);
 
-          var libroTrovato = Books_detail.firstWhere(
-                (libro) => libro['id'] == preferito['libro'],
-            orElse: () => null, // Restituisce null se non viene trovato nessun libro
-          );
+              }
+            }
 
-          // Verifica se il libro è stato trovato
-          if (libroTrovato != null) {
-            likedBooks_detail.add(libroTrovato);
-            print(libroTrovato);
-          } else {
-
-          }
         }
 
 
@@ -118,6 +164,11 @@ class CaricamentoState extends State<Caricamentoprehomepage> {
         dati.value[2] = profilo_lettore;
         dati.value[3] = letture_utente;
         dati.value[4] = Books_detail;
+        dati.value[5] = sessioni_lettura_utente;
+
+
+
+
 
 
         Navigator.pushReplacement(
@@ -126,6 +177,7 @@ class CaricamentoState extends State<Caricamentoprehomepage> {
             builder: (context) => HomePage(
               authToken: widget.authToken,
               dati: dati,
+              id_utente: widget.id_utente,
             ),
           ),
         );
@@ -145,7 +197,9 @@ class CaricamentoState extends State<Caricamentoprehomepage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+        canPop: false,
+        child:  Scaffold(
       body: Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 50),
@@ -173,6 +227,6 @@ class CaricamentoState extends State<Caricamentoprehomepage> {
           ),
         ),
       ),
-    );
+    ));
   }
 }
