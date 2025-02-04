@@ -1,19 +1,15 @@
-import 'dart:async';
-
+import 'dart:async' show Future;
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:book_journey/api.dart';
-import '../Funzioni.dart';
-import 'package:flutter/material.dart';
 import 'dart:math';
-import 'SessioneLettura.dart';
+import 'sessione_lettura.dart';
 
 class SemiCircleProgress extends StatelessWidget {
   final double progress;
 
-  const SemiCircleProgress({Key? key, required this.progress}) : super(key: key);
+  const SemiCircleProgress({super.key, required this.progress});
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +33,7 @@ class SemiCirclePainter extends CustomPainter {
       ..strokeWidth = 10.0;
 
     final Paint progressPaint = Paint()
-      ..color = Color(0xFF06402B)
+      ..color = const Color(0xFF06402B)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 10.0
       ..strokeCap = StrokeCap.round;
@@ -70,10 +66,10 @@ class SemiCirclePainter extends CustomPainter {
 class Lettureincorso extends StatefulWidget {
   final String authToken;
   ValueNotifier<List<List<dynamic>>> dati = ValueNotifier<List<List<dynamic>>>([]);
-  int id_utente;
+  int idUtente;
 
   int secondsElapsed = 0;
-  Lettureincorso({required this.authToken, required this.dati, required this.id_utente });
+  Lettureincorso({super.key, required this.authToken, required this.dati, required this.idUtente });
 
   @override
   _LettureInCorsoState createState() => _LettureInCorsoState();
@@ -82,10 +78,10 @@ class Lettureincorso extends StatefulWidget {
 class _LettureInCorsoState extends State<Lettureincorso> {
 
 
-  Future<void> interrompi_lettura(Map lettura) async {
+  Future<void> interrompiLettura(Map lettura) async {
     lettura['iniziato'] = false;
     lettura['interrotto'] = true;
-    final start = Config.lettura_utente + widget.id_utente.toString() + "/" + lettura['libro'];
+    final start = "${Config.lettura_utente}${widget.idUtente}/" + lettura['libro'];
     final Uri endpoint = Uri.parse(start);
     final risposta = await http.put(
         endpoint,
@@ -97,13 +93,13 @@ class _LettureInCorsoState extends State<Lettureincorso> {
     );
     if(risposta.statusCode == 200 || risposta.statusCode == 201)
     {
-      for(var lettura_caricata in widget.dati.value[3] )
+      for(var lettucecaricature in widget.dati.value[3] )
       {
-        if (lettura_caricata['id'] == lettura['id'])
+        if (lettucecaricature['id'] == lettura['id'])
         {
           setState(() {
-            lettura_caricata['iniziato'] = false;
-            lettura_caricata['interrotto'] = true;
+            lettucecaricature['iniziato'] = false;
+            lettucecaricature['interrotto'] = true;
           });
         }
       }
@@ -124,7 +120,7 @@ class _LettureInCorsoState extends State<Lettureincorso> {
             children: [
               SimpleDialogOption(
                 onPressed: () async {
-                  await interrompi_lettura(lettura);
+                  await interrompiLettura(lettura);
                   Navigator.pop(context);
                 },
                 child: const Row(
@@ -165,18 +161,18 @@ class _LettureInCorsoState extends State<Lettureincorso> {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
-        return TimerDialog(authToken:  widget.authToken,dati: widget.dati, libro: libro, lettura: lettura, id_utente:  widget.id_utente,);
+        return TimerDialog(authToken:  widget.authToken,dati: widget.dati, libro: libro, lettura: lettura, idUtente:  widget.idUtente,);
       },
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    var letture_not_complete = [];
+    var lettureNotComplete = [];
 
     for (var lettura in  (widget.dati.value[3])) {
       if (lettura['completato'] == false && lettura['interrotto'] == false) {
-        letture_not_complete.add(lettura);
+        lettureNotComplete.add(lettura);
       }
     }
 
@@ -204,7 +200,7 @@ class _LettureInCorsoState extends State<Lettureincorso> {
                 ),
               ];
             },
-            body: letture_not_complete.length != 0 ?SingleChildScrollView(
+            body: lettureNotComplete.isNotEmpty ?SingleChildScrollView(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
@@ -218,13 +214,13 @@ class _LettureInCorsoState extends State<Lettureincorso> {
                               .size
                               .height * 0.8,
                           child: ListView.builder(
-                            itemCount: (letture_not_complete.length),
+                            itemCount: (lettureNotComplete.length),
                             itemBuilder: (context, index) {
                               var libroTrovato = widget.dati.value[4]
                                   .firstWhere(
                                     (elemento) =>
                                 elemento['id'] ==
-                                    letture_not_complete[index]['libro'],
+                                    lettureNotComplete[index]['libro'],
                                 orElse: () => null,
                               );
                               var letturaTrovata = widget.dati.value[3]
@@ -233,13 +229,13 @@ class _LettureInCorsoState extends State<Lettureincorso> {
                                   elemento['libro'] == libroTrovato['id'],
                                   orElse: () => {'id': "N/A"}
                               );
-                              var pagine_rimaste = libroTrovato['numero_pagine'] -
-                                  letture_not_complete[index]['numero_pagine_lette'];
-                              var tempo_lettura_secondi = letture_not_complete[index]['tempo_di_lettura_secondi'];
-                              var numero_ore_lettura = tempo_lettura_secondi ~/
+                              var pagineRimaste = libroTrovato['numero_pagine'] -
+                                  lettureNotComplete[index]['numero_pagine_lette'];
+                              var tempoLetturaSecondi = lettureNotComplete[index]['tempo_di_lettura_secondi'];
+                              var numeroOreLettura = tempoLetturaSecondi ~/
                                   3600;
-                              var numero_minuti_lettura = (tempo_lettura_secondi ~/
-                                  60) - (numero_ore_lettura * 60);
+                              var numeroMinutiLettura = (tempoLetturaSecondi ~/
+                                  60) - (numeroOreLettura * 60);
                               return GestureDetector(
                                 child: Card(
                                   elevation: 5,
@@ -266,30 +262,30 @@ class _LettureInCorsoState extends State<Lettureincorso> {
                                               alignment: Alignment.topLeft,
                                               child: SemiCircleProgress(
                                                   progress: (double.parse(
-                                                      letture_not_complete[index]['percentuale']) /
+                                                      lettureNotComplete[index]['percentuale']) /
                                                       100)),
                                             ),
                                           ),
-                                          SizedBox(height: 20),
-                                          Text("$pagine_rimaste page left",
+                                          const SizedBox(height: 20),
+                                          Text("$pagineRimaste page left",
                                               style: const TextStyle(fontWeight: FontWeight.bold)),
-                                          SizedBox(height: 10),
-                                          Text("Booking time:"),
+                                          const SizedBox(height: 10),
+                                          const Text("Booking time:"),
                                           Row(
                                             children: [
-                                              Text("$numero_ore_lettura hours",
-                                                  style: TextStyle(
+                                              Text("$numeroOreLettura hours",
+                                                  style: const TextStyle(
                                                       fontWeight: FontWeight
                                                           .bold)),
-                                              SizedBox(width: 5),
+                                              const SizedBox(width: 5),
                                               Text(
-                                                  "$numero_minuti_lettura minutes",
-                                                  style: TextStyle(
+                                                  "$numeroMinutiLettura minutes",
+                                                  style: const TextStyle(
                                                       fontWeight: FontWeight
                                                           .bold)),
                                             ],
                                           ),
-                                          SizedBox(width: 200, height: 20)
+                                          const SizedBox(width: 200, height: 20)
                                         ],
                                       ),
                                     ],

@@ -6,6 +6,8 @@ import 'package:book_journey/api.dart';
 import 'caricamento_pre_home_page.dart';
 
 class Registrazione extends StatefulWidget {
+  const Registrazione({super.key});
+
 
   @override
   _RegistrazionenPageState createState() => _RegistrazionenPageState();
@@ -31,7 +33,6 @@ class _RegistrazionenPageState extends State<Registrazione> {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'username': username, 'password': password, 'email': '$username@gmail.com'}),
       );
-      print('Response body: ${response.body}');
       if (response.statusCode == 200 || response.statusCode == 201) {
         await authenticate(username, password);
       } else {
@@ -75,7 +76,7 @@ class _RegistrazionenPageState extends State<Registrazione> {
   }
 
 
-  Future<int?> ottengo_id() async {
+  Future<int?> ottengoId() async {
     final url = Uri.parse(Config.auth_me);
 
     try {
@@ -83,10 +84,9 @@ class _RegistrazionenPageState extends State<Registrazione> {
         url,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Token ${_authToken}',
+          'Authorization': 'Token $_authToken',
         },
       );
-      print('Response body: ${response.body}');
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
         return data['id'];
@@ -237,7 +237,7 @@ class _RegistrazionenPageState extends State<Registrazione> {
                               suffixIcon: IconButton(
                                 icon: Icon(
                                   _obscureText ? Icons.visibility: Icons.visibility_off ,
-                                  color: Color(0xFF06402B),
+                                  color: const Color(0xFF06402B),
                                 ),
                                 onPressed: () {
                                   setState(() {
@@ -278,8 +278,8 @@ class _RegistrazionenPageState extends State<Registrazione> {
                                 _usernameController.text,
                                 _passwordController.text,
                               );
-                              int? id = await ottengo_id();
-                              _authToken.isNotEmpty? Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Caricamentoprehomepage(authToken: _authToken, id_utente: id!,prima_volta: true,))) : null;
+                              int? id = await ottengoId();
+                              _authToken.isNotEmpty? Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Caricamentoprehomepage(authToken: _authToken, idUtente: id!,primaVolta: true,))) : null;
                             },
                             child: isLoading
                                 ? const SizedBox(

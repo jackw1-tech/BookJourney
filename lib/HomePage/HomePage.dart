@@ -1,7 +1,7 @@
-import 'package:book_journey/LettureInCorso/LettureInCorso.dart';
+import 'package:book_journey/LettureInCorso/letture_in_corso.dart';
 import 'package:flutter/material.dart';
 import 'package:book_journey/CercaLibri/cerca.dart';
-import 'package:book_journey/Profilo/Profilo.dart';
+import 'package:book_journey/Profilo/profilo.dart';
 
 class HomePage extends StatefulWidget {
   final String authToken;
@@ -25,9 +25,9 @@ class _HomePageState extends State<HomePage> {
         child: Scaffold(
           body: TabBarView(
             children: [
-             Lettureincorso(authToken: widget.authToken, dati: widget.dati, id_utente: widget.id_utente,),
+             Lettureincorso(authToken: widget.authToken, dati: widget.dati, idUtente: widget.id_utente,),
               CercaLibri(authToken: widget.authToken, dati: widget.dati, idUtente: widget.id_utente,),
-              Profilo(authToken: widget.authToken, dati: widget.dati, id_utente: widget.id_utente,)
+              Profilo(authToken: widget.authToken, dati: widget.dati, idUtente: widget.id_utente,)
             ],
           ),
           bottomNavigationBar: const BottomAppBar(

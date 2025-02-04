@@ -48,7 +48,7 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  Future<int?> ottengo_id() async {
+  Future<int?> ottengoId() async {
     final url = Uri.parse(Config.auth_me);
 
     try {
@@ -56,10 +56,9 @@ class _LoginPageState extends State<LoginPage> {
         url,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Token ${_authToken}',
+          'Authorization': 'Token $_authToken',
         },
       );
-      print('Response body: ${response.body}');
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
         return data['id'];
@@ -254,8 +253,8 @@ class _LoginPageState extends State<LoginPage> {
                                 _usernameController.text,
                                 _passwordController.text,
                               );
-                              int? id = await ottengo_id();
-                              _authToken.isNotEmpty? Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Caricamentoprehomepage(authToken: _authToken, id_utente: id!,prima_volta: false,))) : null;
+                              int? id = await ottengoId();
+                              _authToken.isNotEmpty? Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Caricamentoprehomepage(authToken: _authToken, idUtente: id!,primaVolta: false,))) : null;
                             },
                             child: isLoading
                                 ? const SizedBox(

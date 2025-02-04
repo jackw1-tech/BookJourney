@@ -3,13 +3,13 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:book_journey/api.dart';
 import 'package:intl/intl.dart';
-import '../Funzioni.dart';
+import '../funzioni.dart';
 
 class Profilo extends StatefulWidget {
   final String authToken;
   ValueNotifier<List<List<dynamic>>> dati = ValueNotifier<List<List<dynamic>>>([]);
-  final int id_utente;
-  Profilo({super.key, required this.authToken, required this.dati, required this.id_utente });
+  final int idUtente;
+  Profilo({super.key, required this.authToken, required this.dati, required this.idUtente });
 
   @override
   _ProfiloState createState() => _ProfiloState();
@@ -106,32 +106,30 @@ class _ProfiloState extends State<Profilo> {
     List<dynamic> datiAttuali = widget.dati.value[2];
 
 
-    num numero_pagine_gia_lette = 0;
+    num numeroPagineGiaLette = 0;
     if(iniziato)
       {
-        for(var sessione_lettura in widget.dati.value[5])
+        for(var sessionlettuce in widget.dati.value[5])
           {
-            if(sessione_lettura['libro'] == libro['id'])
+            if(sessionlettuce['libro'] == libro['id'])
               {
-                numero_pagine_gia_lette += sessione_lettura['numero_pagine_lette'].toInt();
+                numeroPagineGiaLette += sessionlettuce['numero_pagine_lette'].toInt();
               }
           }
       }
 
     datiAttuali[0]['numero_libri_letti'] += 1;
 
-    print(datiAttuali[0]['numero_pagine_lette']);
-    var pagine_al_minuto_lette_fixed =  datiAttuali[0]['pagine_al_minuto_lette'] == 0 ? 0.8 :  datiAttuali[0]['pagine_al_minuto_lette'];
+    var pagineAlMinutoLetteFixed =  datiAttuali[0]['pagine_al_minuto_lette'] == 0 ? 0.8 :  datiAttuali[0]['pagine_al_minuto_lette'];
     if(lettura != null) {
-      datiAttuali[0]['numero_pagine_lette'] += lettura['numero_pagine_lette'] - numero_pagine_gia_lette;
-      print(datiAttuali[0]['numero_pagine_lette']);
+      datiAttuali[0]['numero_pagine_lette'] += lettura['numero_pagine_lette'] - numeroPagineGiaLette;
     } else {
       datiAttuali[0]['numero_pagine_lette'] +=  (libro['numero_pagine']);
     }
 
     datiAttuali[0]['numero_ore_lettura'] =
         (datiAttuali[0]['numero_pagine_lette'] /
-            pagine_al_minuto_lette_fixed) / 60;
+            pagineAlMinutoLetteFixed) / 60;
     datiAttuali[0]['numero_giorni_lettura'] =
         datiAttuali[0]['numero_ore_lettura']  / 24;
     datiAttuali[0]['numero_mesi_lettura'] =
@@ -143,8 +141,7 @@ class _ProfiloState extends State<Profilo> {
       widget.dati.value[2][0] = datiAttuali[0];
     });
 
-    print(widget.dati.value[2][0]['numero_pagine_lette']);
-    String id = widget.id_utente.toString();
+    String id = widget.idUtente.toString();
     String profiloLettoreUrl = '${Config.profilo_lettoreURL}$id/';
 
     final response = await http.put(Uri.parse(profiloLettoreUrl),
@@ -157,19 +154,19 @@ class _ProfiloState extends State<Profilo> {
         );
 
         if (response.statusCode == 200 || response.statusCode == 201) {
-          if(!iniziato)
-              startReading(libro, true, pagine_al_minuto_lette_fixed);
+          if(!iniziato) {
+            startReading(libro, true, pagineAlMinutoLetteFixed);
+          }
 
         }
 
 
   }
 
-  Future<void> startReading(Map libro, bool completato, double pagine_al_minuto_lette) async {
+  Future<void> startReading(Map libro, bool completato, double pagineAlMinutoLette) async {
 
-    final Map<String, dynamic> data = utils.componi_Json_prima_lettura(libro, completato, pagine_al_minuto_lette);
-    print(data);
-    final Uri endpoint = Uri.parse(Config.crea_lettura_utente + widget.id_utente.toString() + "/lettura/");
+    final Map<String, dynamic> data = utils.componiJsonPrimaLettura(libro, completato, pagineAlMinutoLette);
+    final Uri endpoint = Uri.parse("${Config.crea_lettura_utente}${widget.idUtente}/lettura/");
     try {
      final response = await http.post(
         endpoint,
@@ -179,7 +176,6 @@ class _ProfiloState extends State<Profilo> {
         },
         body: jsonEncode(data),
      );
-     print(response.statusCode);
          if (response.statusCode == 200 || response.statusCode == 201){
            setState(() {
              widget.dati.value[3].add(jsonDecode(response.body));
@@ -188,12 +184,11 @@ class _ProfiloState extends State<Profilo> {
 
 
     } catch (e) {
-      print("Errore durante la richiesta: $e");
     }
   }
 
-  Future<void> elimina_lettura(Map lettura) async {
-    final start = Config.lettura_utente + widget.id_utente.toString() + "/" + lettura['libro'];
+  Future<void> eliminaLettura(Map lettura) async {
+    final start = "${Config.lettura_utente}${widget.idUtente}/" + lettura['libro'];
     final Uri endpoint = Uri.parse(start);
 
     final risposta = await http.delete(
@@ -214,10 +209,10 @@ class _ProfiloState extends State<Profilo> {
 
   }
 
-  Future<void> interrompi_lettura(Map lettura) async {
+  Future<void> interrompiLettura(Map lettura) async {
     lettura['iniziato'] = false;
     lettura['interrotto'] = true;
-    final start = Config.lettura_utente  + widget.id_utente.toString() + "/" +lettura['libro'];
+    final start = "${Config.lettura_utente}${widget.idUtente}/" +lettura['libro'];
     final Uri endpoint = Uri.parse(start);
     final risposta = await http.put(
       endpoint,
@@ -229,13 +224,13 @@ class _ProfiloState extends State<Profilo> {
     );
     if(risposta.statusCode == 200 || risposta.statusCode == 201)
       {
-        for(var lettura_caricata in widget.dati.value[3] )
+        for(var lettucecaricature in widget.dati.value[3] )
         {
-          if (lettura_caricata['id'] == lettura['id'])
+          if (lettucecaricature['id'] == lettura['id'])
           {
             setState(() {
-              lettura_caricata['iniziato'] = false;
-              lettura_caricata['interrotto'] = true;
+              lettucecaricature['iniziato'] = false;
+              lettucecaricature['interrotto'] = true;
             });
           }
         }
@@ -246,10 +241,10 @@ class _ProfiloState extends State<Profilo> {
 
   }
 
-  Future<void> riprendi_lettura(Map lettura) async {
+  Future<void> riprendiLettura(Map lettura) async {
     lettura['iniziato'] = true;
     lettura['interrotto'] = false;
-    final start = Config.lettura_utente + widget.id_utente.toString() + "/" + lettura['libro'];
+    final start = "${Config.lettura_utente}${widget.idUtente}/" + lettura['libro'];
     final Uri endpoint = Uri.parse(start);
     final risposta = await http.put(
         endpoint,
@@ -261,13 +256,13 @@ class _ProfiloState extends State<Profilo> {
     );
     if(risposta.statusCode == 200 || risposta.statusCode == 201)
     {
-      for(var lettura_caricata in widget.dati.value[3] )
+      for(var lettucecaricature in widget.dati.value[3] )
         {
-          if (lettura_caricata['id'] == lettura['id'])
+          if (lettucecaricature['id'] == lettura['id'])
               {
                 setState(() {
-                  lettura_caricata['iniziato'] = true;
-                  lettura_caricata['interrotto'] = false;
+                  lettucecaricature['iniziato'] = true;
+                  lettucecaricature['interrotto'] = false;
                 });
               }
         }
@@ -281,16 +276,16 @@ class _ProfiloState extends State<Profilo> {
 
   }
 
-  Future<void> completa_lettura(Map lettura, Map libro, double pagine_lette_al_minuto) async {
+  Future<void> completaLettura(Map lettura, Map libro, double pagineLetteAlMinuto) async {
     lettura['interrotto'] = false;
     lettura['interrotto'] = false;
     lettura['completato'] = true;
     lettura['data_fine_lettura'] = DateFormat('yyyy-MM-dd').format(DateTime.now());
     lettura['numero_pagine_lette'] = libro['numero_pagine'];
     lettura['percentuale'] = "100";
-    lettura['tempo_di_lettura_secondi'] = (lettura['numero_pagine_lette'] * pagine_lette_al_minuto * 60).toInt();
+    lettura['tempo_di_lettura_secondi'] = (lettura['numero_pagine_lette'] * pagineLetteAlMinuto * 60).toInt();
 
-    final start = Config.lettura_utente + widget.id_utente.toString() + "/" + lettura['libro'];
+    final start = "${Config.lettura_utente}${widget.idUtente}/" + lettura['libro'];
     final Uri endpoint = Uri.parse(start);
     final risposta = await http.put(
         endpoint,
@@ -303,22 +298,21 @@ class _ProfiloState extends State<Profilo> {
 
     if(risposta.statusCode == 200 || risposta.statusCode == 201)
     {
-      for(var lettura_caricata in widget.dati.value[3] )
+      for(var lettucecaricature in widget.dati.value[3] )
       {
-        if (lettura_caricata['id'] == lettura['id'])
+        if (lettucecaricature['id'] == lettura['id'])
         {
           setState(() {
-            lettura_caricata['interrotto'] = false;
-            lettura_caricata['iniziato'] = false;
-            lettura_caricata['completato'] = true;
-            lettura_caricata['data_fine_lettura'] = DateFormat('yyyy-MM-dd').format(DateTime.now());
-            lettura_caricata['numero_pagine_lette'] = libro['numero_pagine'];
-            lettura_caricata['percentuale'] = "100";
-            lettura_caricata['tempo_di_lettura_secondi'] = (lettura_caricata['numero_pagine_lette'] * pagine_lette_al_minuto * 60).toInt();
+            lettucecaricature['interrotto'] = false;
+            lettucecaricature['iniziato'] = false;
+            lettucecaricature['completato'] = true;
+            lettucecaricature['data_fine_lettura'] = DateFormat('yyyy-MM-dd').format(DateTime.now());
+            lettucecaricature['numero_pagine_lette'] = libro['numero_pagine'];
+            lettucecaricature['percentuale'] = "100";
+            lettucecaricature['tempo_di_lettura_secondi'] = (lettucecaricature['numero_pagine_lette'] * pagineLetteAlMinuto * 60).toInt();
           });
         }
       }
-      print(lettura);
       await markAsDoneBook(libro, true, lettura: lettura);
 
     }
@@ -327,7 +321,7 @@ class _ProfiloState extends State<Profilo> {
   }
 
 
-  void showPreferitiDialog(Map libro, Map Lettura) {
+  void showPreferitiDialog(Map libro, Map lettura) {
 
     showDialog(context: context, builder: (BuildContext context) {
       return SimpleDialog(
@@ -346,8 +340,8 @@ class _ProfiloState extends State<Profilo> {
                 ]
             ),
           ),
-          if(Lettura["id"] == "N/A") const Divider(),
-          if(Lettura["id"] == "N/A") SimpleDialogOption(
+          if(lettura["id"] == "N/A") const Divider(),
+          if(lettura["id"] == "N/A") SimpleDialogOption(
             onPressed: () async {
               await startReading(libro, false, 0);
               Navigator.pop(context);
@@ -361,8 +355,8 @@ class _ProfiloState extends State<Profilo> {
                 ]
             ),
           ),
-          if(Lettura["id"] == "N/A") const Divider(),
-          if(Lettura["id"] == "N/A") SimpleDialogOption(
+          if(lettura["id"] == "N/A") const Divider(),
+          if(lettura["id"] == "N/A") SimpleDialogOption(
             onPressed: () async {
               await markAsDoneBook(libro, false);
               Navigator.pop(context);
@@ -385,13 +379,13 @@ class _ProfiloState extends State<Profilo> {
     );
   }
 
-  void showLibreriaDialog(Map libro, Map Lettura, double pagine_lette_al_minuto) {
+  void showLibreriaDialog(Map libro, Map lettura, double pagineLetteAlMinuto) {
     showDialog(context: context, builder: (BuildContext context) {
       return SimpleDialog(
         children: [
           SimpleDialogOption(
             onPressed: () async {
-              await elimina_lettura(Lettura);
+              await eliminaLettura(lettura);
               Navigator.pop(context);
             },
             child: const Row(
@@ -403,25 +397,25 @@ class _ProfiloState extends State<Profilo> {
                 ]
             ),
           ),
-          Lettura['completato'] == false ? const Divider() : SizedBox(),
-          Lettura['completato'] == false ? SimpleDialogOption(
+          lettura['completato'] == false ? const Divider() : const SizedBox(),
+          lettura['completato'] == false ? SimpleDialogOption(
             onPressed: () async {
-              Lettura['interrotto'] == false ? await interrompi_lettura(Lettura) : (await riprendi_lettura(Lettura));
+              lettura['interrotto'] == false ? await interrompiLettura(lettura) : (await riprendiLettura(lettura));
               Navigator.pop(context);
             },
             child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Lettura['interrotto'] == false ? Text('Stop reading', textAlign: TextAlign.center) : Text('Resume reading', textAlign: TextAlign.center,) ,
+                  lettura['interrotto'] == false ? const Text('Stop reading', textAlign: TextAlign.center) : const Text('Resume reading', textAlign: TextAlign.center,) ,
                   const SizedBox(width: 5),
-                  Lettura['interrotto'] == false ? const Icon(Icons.stop_circle_rounded, color: Color(0xFF06402B),) : const Icon(Icons.restart_alt, color: Color(0xFF06402B),)
+                  lettura['interrotto'] == false ? const Icon(Icons.stop_circle_rounded, color: Color(0xFF06402B),) : const Icon(Icons.restart_alt, color: Color(0xFF06402B),)
                 ]
             ),
-          ) : SizedBox(),
-          Lettura['completato'] == false ?  const Divider() : SizedBox(),
-          Lettura['completato'] == false ? SimpleDialogOption(
+          ) : const SizedBox(),
+          lettura['completato'] == false ?  const Divider() : const SizedBox(),
+          lettura['completato'] == false ? SimpleDialogOption(
             onPressed: () async {
-              await completa_lettura(Lettura, libro, pagine_lette_al_minuto);
+              await completaLettura(lettura, libro, pagineLetteAlMinuto);
               Navigator.pop(context);
             },
             child: const Row(
@@ -432,7 +426,7 @@ class _ProfiloState extends State<Profilo> {
                   Icon(Icons.incomplete_circle, color: Color(0xFF06402B),)
                 ]
             ),
-          ) : SizedBox(),
+          ) : const SizedBox(),
 
 
         ],
@@ -574,7 +568,7 @@ class _ProfiloState extends State<Profilo> {
                       style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                   ),
-                  widget.dati.value[1].length != 0 ? SizedBox(
+                  widget.dati.value[1].isNotEmpty ? SizedBox(
                     height: 380,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
@@ -627,7 +621,7 @@ class _ProfiloState extends State<Profilo> {
                       Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          SizedBox(height: 20),
+                          const SizedBox(height: 20),
                           Image.asset(
                           'assets/images/wounded-heart.png',
                           width: 100,
@@ -648,7 +642,7 @@ class _ProfiloState extends State<Profilo> {
                       style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                   ),
-                  widget.dati.value[3].length != 0 ? SizedBox(
+                  widget.dati.value[3].isNotEmpty ? SizedBox(
                     height: 380,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
@@ -742,7 +736,7 @@ class _ProfiloState extends State<Profilo> {
                         Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            SizedBox(height: 20),
+                            const SizedBox(height: 20),
                             Image.asset(
                               'assets/images/library.png',
                               width: 100,

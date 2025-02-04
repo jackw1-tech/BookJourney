@@ -1,15 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:ffi';
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:lottie/lottie.dart';
 import '../api.dart';
 import 'package:http/http.dart' as http;
 
-import 'LettureInCorso.dart';
 
 
 
@@ -18,9 +14,9 @@ class TimerDialog extends StatefulWidget {
   ValueNotifier<List<List<dynamic>>> dati = ValueNotifier<List<List<dynamic>>>([]);
   Map libro;
   Map lettura;
-  final int id_utente;
+  final int idUtente;
 
-  TimerDialog({required this.authToken, required this.dati, required this.libro, required this.lettura, required this.id_utente });
+  TimerDialog({super.key, required this.authToken, required this.dati, required this.libro, required this.lettura, required this.idUtente });
   @override
   _TimerDialogState createState() => _TimerDialogState();
 }
@@ -52,61 +48,56 @@ class _TimerDialogState extends State<TimerDialog> {
     }
   }
 
-  Future<void> inserisci_sessione_lettura(Map lettura, Map libro, int numero_pagina, int tempo_in_secondi) async {
+  Future<void> inserisciSessioneLettura(Map lettura, Map libro, int numeroPagina, int tempoInSecondi) async {
 
-    print("ciao");
-    Map<dynamic,dynamic> sessione_lettura = {};
-    sessione_lettura['libro'] = libro['id'];
-    sessione_lettura['numero_pagine_lette'] = numero_pagina - lettura['numero_pagine_lette'];
-    sessione_lettura['tempo_in_secondi'] = tempo_in_secondi;
-    sessione_lettura['tempo_in_minuti'] = tempo_in_secondi ~/ 60;
-    sessione_lettura['pagine_al_minuto_lette'] = (((sessione_lettura['numero_pagine_lette'] / sessione_lettura['tempo_in_minuti']) * 100).truncate())/100;
+    Map<dynamic,dynamic> sessioneLettura = {};
+    sessioneLettura['libro'] = libro['id'];
+    sessioneLettura['numero_pagine_lette'] = numeroPagina - lettura['numero_pagine_lette'];
+    sessioneLettura['tempo_in_secondi'] = tempoInSecondi;
+    sessioneLettura['tempo_in_minuti'] = tempoInSecondi ~/ 60;
+    sessioneLettura['pagine_al_minuto_lette'] = (((sessioneLettura['numero_pagine_lette'] / sessioneLettura['tempo_in_minuti']) * 100).truncate())/100;
 
-    print(sessione_lettura);
 
-    final start = Config.crea_sessione_lettura + widget.id_utente.toString() + "/sessione-lettura/";
+    final start = "${Config.crea_sessione_lettura}${widget.idUtente}/sessione-lettura/";
     final Uri endpoint = Uri.parse(start);
-    print(endpoint);
     final risposta = await http.post(
         endpoint,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Token ${widget.authToken}',
         },
-        body: jsonEncode(sessione_lettura)
+        body: jsonEncode(sessioneLettura)
     );
-    print(risposta.statusCode);
     if(risposta.statusCode == 200 || risposta.statusCode == 201) {
-      var sessione_lettura_inserita = jsonDecode(risposta.body);
+      var sessioneLetturaInserita = jsonDecode(risposta.body);
 
-      widget.dati.value[5].add(sessione_lettura_inserita);
+      widget.dati.value[5].add(sessioneLetturaInserita);
 
 
 
-      var lettura_trovata = widget.dati.value[3].firstWhere(
+      var letturaTrovata = widget.dati.value[3].firstWhere(
             (elemento) =>
-        elemento['libro'] == sessione_lettura_inserita['libro'],
+        elemento['libro'] == sessioneLetturaInserita['libro'],
         orElse: () => null,
       );
 
 
-      print( widget.dati.value[2]);
-      var index_1 = widget.dati.value[3].indexOf(lettura_trovata);
-      lettura_trovata['numero_pagine_lette'] = numero_pagina;
-      lettura_trovata['tempo_di_lettura_secondi'] += tempo_in_secondi;
-      lettura_trovata['percentuale'] =
-          ((lettura_trovata['numero_pagine_lette'] / libro['numero_pagine']) *
+      var index_1 = widget.dati.value[3].indexOf(letturaTrovata);
+      letturaTrovata['numero_pagine_lette'] = numeroPagina;
+      letturaTrovata['tempo_di_lettura_secondi'] += tempoInSecondi;
+      letturaTrovata['percentuale'] =
+          ((letturaTrovata['numero_pagine_lette'] / libro['numero_pagine']) *
               100).toStringAsFixed(2);
 
-      if (lettura_trovata['numero_pagine_lette'] >= libro['numero_pagine']) {
-        lettura_trovata['numero_pagine_lette'] = libro['numero_pagine'];
-        lettura_trovata['percentuale'] = ("100");
-        lettura_trovata['completato'] = true;
-        lettura_trovata['data_fine_lettura'] =
+      if (letturaTrovata['numero_pagine_lette'] >= libro['numero_pagine']) {
+        letturaTrovata['numero_pagine_lette'] = libro['numero_pagine'];
+        letturaTrovata['percentuale'] = ("100");
+        letturaTrovata['completato'] = true;
+        letturaTrovata['data_fine_lettura'] =
             DateFormat('yyyy-MM-dd').format(DateTime.now());
         widget.dati.value[2][0]['numero_libri_letti'] += 1;
-        String id = widget.id_utente.toString();
-        final start_1 = Config.profilo_lettoreURL + '$id/';
+        String id = widget.idUtente.toString();
+        final start_1 = '${Config.profilo_lettoreURL}$id/';
         await http.put(
             Uri.parse(start_1),
             headers: {
@@ -116,13 +107,12 @@ class _TimerDialogState extends State<TimerDialog> {
             body: jsonEncode(widget.dati.value[2][0])
         );
       }
-      print("ciao3");
       setState(() {
-        widget.dati.value[3][index_1] = lettura_trovata;
+        widget.dati.value[3][index_1] = letturaTrovata;
       });
 
-      final start_2 = Config.lettura_utente + widget.id_utente.toString() + "/" +
-          sessione_lettura_inserita['libro'];
+      final start_2 = "${Config.lettura_utente}${widget.idUtente}/" +
+          sessioneLetturaInserita['libro'];
       final Uri endpoint_2 = Uri.parse(start_2);
       final risposta_2 = await http.put(
           endpoint_2,
@@ -130,18 +120,17 @@ class _TimerDialogState extends State<TimerDialog> {
             'Content-Type': 'application/json',
             'Authorization': 'Token ${widget.authToken}',
           },
-          body: jsonEncode(lettura_trovata)
+          body: jsonEncode(letturaTrovata)
       );
       if (risposta_2.statusCode == 200 || risposta_2.statusCode == 201) {
 
       }
 
-      print("ciao4");
       widget.dati.value[2][0]['numero_sessioni_lettura'] += 1;
       widget.dati.value[2][0]['numero_pagine_lette'] +=
-      sessione_lettura['numero_pagine_lette'];
+      sessioneLettura['numero_pagine_lette'];
 
-      var ore = sessione_lettura['tempo_in_minuti'] / 60;
+      var ore = sessioneLettura['tempo_in_minuti'] / 60;
       widget.dati.value[2][0]['numero_ore_lettura'] += ore;
 
       var giorni = ore / 24;
@@ -154,8 +143,8 @@ class _TimerDialogState extends State<TimerDialog> {
           widget.dati.value[2][0]['numero_pagine_lette'] /
               (widget.dati.value[2][0]['numero_ore_lettura'] * 60);
 
-      String id = widget.id_utente.toString();
-      final start_3 = Config.profilo_lettoreURL + '$id/';
+      String id = widget.idUtente.toString();
+      final start_3 = '${Config.profilo_lettoreURL}$id/';
       await http.put(
           Uri.parse(start_3),
           headers: {
@@ -186,7 +175,7 @@ class _TimerDialogState extends State<TimerDialog> {
 
 
   void _askPageNumber(BuildContext context, int sessionDuration, Map lettura) {
-    final TextEditingController _controller = TextEditingController();
+    final TextEditingController controller = TextEditingController();
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -204,7 +193,7 @@ class _TimerDialogState extends State<TimerDialog> {
                 height: 100,
                 animate: true,
                 errorBuilder: (context, error, stackTrace) {
-                  return Text('Errore nel caricamento dell\'animazione');
+                  return const Text('Errore nel caricamento dell\'animazione');
                 },),
 
               Text("You have read for ${sessionDuration ~/ 60} minutes"),
@@ -212,7 +201,7 @@ class _TimerDialogState extends State<TimerDialog> {
               SizedBox(
                 width: 180,
                 child: TextField(
-                  controller: _controller,
+                  controller: controller,
                   keyboardType: TextInputType.number,
                   decoration: const InputDecoration(
                     labelText: "Enter the page number reached",
@@ -237,9 +226,9 @@ class _TimerDialogState extends State<TimerDialog> {
           actions: [
             ElevatedButton(
               onPressed: () async {
-                final pageNumber = int.tryParse(_controller.text);
+                final pageNumber = int.tryParse(controller.text);
                 if (pageNumber != null && pageNumber >  lettura['numero_pagine_lette']) {
-                  await inserisci_sessione_lettura(widget.lettura, widget.libro, pageNumber, secondsElapsed);
+                  await inserisciSessioneLettura(widget.lettura, widget.libro, pageNumber, secondsElapsed);
                 }  else {
                   showDialog(
                     context: context,
